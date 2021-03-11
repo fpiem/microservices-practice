@@ -1,5 +1,5 @@
-package it.polito.ap.ecommerce
-
+package it.polito.ap.common.dto
+/*
 import it.polito.ap.ecommerce.utils.CartProduct
 import it.polito.ap.ecommerce.utils.StatusType
 import org.bson.types.ObjectId
@@ -10,4 +10,4 @@ class OrderDTO(
     val user: User,
     val deliveryList: List<Delivery>,
     var status: StatusType
-)
+)*/
