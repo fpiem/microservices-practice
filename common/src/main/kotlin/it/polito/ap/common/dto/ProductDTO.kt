@@ -1,4 +1,9 @@
 package it.polito.ap.common.dto
+
+data class ProductDTO (
+    var productId: String,
+    var price: Double
+)
 /*
 import java.lang.IllegalArgumentException
 
