@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
+import org.springframework.web.client.RestTemplate
 
 @RestController
 @RequestMapping("/products")
@@ -66,4 +67,11 @@ class ProductController (val productService: ProductService) {
         return ResponseEntity.ok("Deletion of product with id ${productId} completed")
     }
 
+    @GetMapping("/test")
+    fun test() : ResponseEntity<String> {
+        LOGGER.info("test comunication")
+        val restTemplate = RestTemplate()
+        val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
+        return ResponseEntity.ok(res.toString())
+    }
 }

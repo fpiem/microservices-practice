@@ -71,4 +71,9 @@ class OrderController(val orderService: OrderService) {
 
     }
 
+    @GetMapping("/test")
+    fun test () : String {
+        return "ciao\n"
+    }
+
 }
