@@ -1,10 +1,12 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import org.jetbrains.kotlin.kapt3.base.Kapt.kapt
 
 plugins {
     id("org.springframework.boot") version "2.4.3"
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     kotlin("jvm") version "1.4.30"
     kotlin("plugin.spring") version "1.4.30"
+    kotlin("kapt") version "1.4.30"
 }
 
 group = "it.polito.ap"
@@ -24,6 +26,11 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
     implementation(project(":common"))
+
+    implementation ("org.mapstruct:mapstruct:1.4.2.Final")
+    annotationProcessor ("org.mapstruct:mapstruct-processor:1.4.2.Final")
+
+    kapt("org.springframework.boot:spring-boot-configuration-processor")
 }
 
 tasks.withType<KotlinCompile> {

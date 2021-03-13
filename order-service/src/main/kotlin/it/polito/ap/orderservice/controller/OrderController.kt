@@ -54,7 +54,7 @@ class OrderController(val orderService: OrderService) {
         val order = orderService.getOrderById(orderId)
         if (order.isPresent) { // TODO valutare di cambiare la logica in modo che se un admin modifica il suo ordine lo fa come CUSTOMER
             LOGGER.info("Found order for id $orderId")
-            if (RoleType.ROLE_ADMIN == user.role) {
+            if (RoleType.ROLE_ADMIN == user.role) { // TODO spostare questo controllo sull'admin nel Service
                 val modifiedOrder = orderService.modifyOrder(orderId, newStatus)
                 return ResponseEntity.ok("Order modified by admin! Order status: ${modifiedOrder.status}")
             } else if (order.get().buyer == user.email) {
