@@ -57,7 +57,6 @@ class ProductController (val productService: ProductService) {
             LOGGER.info("modification on $productId failed")
             return ResponseEntity.badRequest().body(null)
         }
-
     }
 
     @DeleteMapping("/{productId}")
@@ -74,4 +73,6 @@ class ProductController (val productService: ProductService) {
         val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
         return ResponseEntity.ok(res.toString())
     }
+
+    // TODO creare AdminController e inserire API per modificare il warehouse (load/unload product)
 }
