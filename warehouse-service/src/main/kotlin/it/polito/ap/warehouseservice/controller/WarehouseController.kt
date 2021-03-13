@@ -4,6 +4,7 @@ import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.DeliveryDTO
 import it.polito.ap.common.dto.WarehouseAlarmDTO
 import it.polito.ap.common.dto.WarehouseProductDTO
+import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.service.WarehouseService
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
@@ -14,14 +15,11 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/warehouses")
-class WarehouseController(val warehouseService: WarehouseService) {
+class WarehouseController(val warehouseService: WarehouseService, var mapper: WarehouseMapper) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
-
-    @Autowired
-    lateinit var mapper: WarehouseMapper
 
     @GetMapping("/{warehouseId}")
     fun warehouseInventory(@PathVariable warehouseId: String): ResponseEntity<String> {
@@ -54,9 +52,8 @@ class WarehouseController(val warehouseService: WarehouseService) {
     }
 
     @GetMapping("/test")
-    fun test(@RequestBody warehouseProductDTO: WarehouseProductDTO): ResponseEntity<WarehouseProduct> {
-        // val mapper = Mappers.getMapper(WarehouseMapper::class.java)
-        return ResponseEntity.ok(mapper.toModel(warehouseProductDTO))
+    fun test(@RequestBody warehouseProduct: WarehouseProduct): ResponseEntity<WarehouseAlarmDTO> {
+        return ResponseEntity.ok(mapper.toAlarmDTO(warehouseProduct))
     }
 
 }
