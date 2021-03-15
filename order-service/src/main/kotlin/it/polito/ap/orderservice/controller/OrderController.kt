@@ -33,7 +33,7 @@ class OrderController(val orderService: OrderService) {
 
     @GetMapping("/{orderId}/status")
     fun orderStatus(@PathVariable orderId: ObjectId, user: UserDTO): ResponseEntity<String> {
-        LOGGER.info("Received request for the status of ${orderId} by ${user.email} with role: ${user.role}!")
+        LOGGER.info("Received request for the status of $orderId by ${user.email} with role: ${user.role}!")
         val order = orderService.getOrderById(orderId)
         if (order.isPresent) {
             LOGGER.info("Found order for id $orderId")

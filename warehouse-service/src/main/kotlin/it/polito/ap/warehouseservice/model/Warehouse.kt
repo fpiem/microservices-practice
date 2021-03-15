@@ -9,6 +9,6 @@ class Warehouse(
     @Id
     val warehouseId: ObjectId,
     val name: String,
-    var inventory: List<WarehouseProduct>
+    var inventory: MutableList<WarehouseProduct>
 )
 

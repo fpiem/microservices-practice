@@ -10,6 +10,7 @@ import it.polito.ap.warehouseservice.service.WarehouseService
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -42,12 +43,23 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
         @RequestParam productAlarm: WarehouseAlarmDTO
     ): ResponseEntity<String> {
         LOGGER.info("Received request for edit ${productAlarm.productId} alarm in $warehouseId")
-        return ResponseEntity.ok("ciao")
+        val alarmDTO = warehouseService.editAlarm(warehouseId, productAlarm)
+        alarmDTO?.let {
+            LOGGER.info("Updated alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId")
+            return ResponseEntity.ok(
+                "Updated alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId"
+            )
+        } ?: kotlin.run {
+            LOGGER.info(
+                "Could not update alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId"
+            )
+            return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+        }
     }
 
     @GetMapping("")
     fun deliveryList(@RequestBody cart: List<CartProductDTO>): ResponseEntity<List<DeliveryDTO>> {
-        LOGGER.info("Received request for delivery list with $cart")
+        LOGGER.info("Received request for delivery list for cart $cart")
         return ResponseEntity.badRequest().body(null)
     }
 
