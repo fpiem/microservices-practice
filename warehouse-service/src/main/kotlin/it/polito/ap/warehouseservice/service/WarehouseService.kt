@@ -6,6 +6,7 @@ import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.repository.WarehouseRepository
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
+import org.bson.types.ObjectId
 import org.mapstruct.Mapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
@@ -17,30 +18,39 @@ class WarehouseService (val warehouseRepository: WarehouseRepository, val mapper
         private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
 
-    fun editAlarm(warehouseId: String, productAlarm: WarehouseAlarmDTO): WarehouseAlarmDTO? {
-        // TODO: differentiate between failures owed to not finding the warehouse or the product in the warehouse
-        // TODO: is it right to return a DTO?
+    fun findWarehouseProduct(warehouse: Warehouse, productId: String): Pair<Int, WarehouseProduct>? {
+        val index = warehouse.inventory.indexOfFirst { it.productId == productId }
+        return if (index == -1) {
+            null
+        } else {
+            Pair(index, warehouse.inventory[index])
+        }
+    }
+
+    fun editAlarm(warehouseId: String, productAlarm: WarehouseAlarmDTO): String {
         LOGGER.info("Received request to edit ${productAlarm.productId} alarm in $warehouseId")
-        val warehouseOptional = warehouseRepository.findById(warehouseId)
-        if (warehouseOptional.isPresent) {
-            val warehouse = warehouseOptional.get()
-            val warehouseProduct = mapper.toModel(productAlarm)
-            val oldWarehouseProduct = warehouse.inventory.find { it.productId == warehouseProduct.productId }
+        val warehouse = warehouseRepository.getWarehouseById(warehouseId)
+        if (warehouse == null) {
+            LOGGER.info("Could not find warehouse $warehouseId")
+            return "could not find warehouse"
+        } else {
+            val newWarehouseProduct = mapper.toModel(productAlarm)
+            val (index, oldWarehouseProduct) = findWarehouseProduct(
+                warehouse, newWarehouseProduct.productId
+            ) ?: Pair(null, null)
+
             oldWarehouseProduct?.let {
-                warehouseProduct.quantity = it.quantity
-                warehouse.inventory[warehouse.inventory.indexOf(oldWarehouseProduct)] = warehouseProduct
+                newWarehouseProduct.quantity = it.quantity
+                warehouse.inventory[index!!] = newWarehouseProduct
                 warehouseRepository.save(warehouse)
                 LOGGER.info(
-                    "Updated alarm threshold for product ${warehouseProduct.productId} in warehouse $warehouseId"
+                    "Updated alarm threshold for product ${newWarehouseProduct.productId} in warehouse $warehouseId"
                 )
-                return mapper.toAlarmDTO(warehouseProduct)
+                return "success"
             } ?: kotlin.run {
-                LOGGER.info("Could not find product ${warehouseProduct.productId} in warehouse $warehouseId")
-                return null
+                LOGGER.info("Could not find product ${newWarehouseProduct.productId} in warehouse $warehouseId")
+                return "could not find product"
             }
-        } else {
-            LOGGER.info("Could not find warehouse $warehouseId")
-            return null
         }
     }
 

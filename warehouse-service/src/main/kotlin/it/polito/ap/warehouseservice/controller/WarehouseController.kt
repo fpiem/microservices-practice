@@ -8,6 +8,7 @@ import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.service.WarehouseService
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
+import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
@@ -43,17 +44,22 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
         @RequestParam productAlarm: WarehouseAlarmDTO
     ): ResponseEntity<String> {
         LOGGER.info("Received request for edit ${productAlarm.productId} alarm in $warehouseId")
-        val alarmDTO = warehouseService.editAlarm(warehouseId, productAlarm)
-        alarmDTO?.let {
-            LOGGER.info("Updated alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId")
-            return ResponseEntity.ok(
-                "Updated alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId"
-            )
-        } ?: kotlin.run {
-            LOGGER.info(
-                "Could not update alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId"
-            )
-            return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+        when (warehouseService.editAlarm(warehouseId, productAlarm)) {
+            "could not find warehouse" -> {
+                val statusString = "Could not find warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "could not find product" -> {
+                val statusString = "Could not find product ${productAlarm.productId} in warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            else -> {  // Success
+                val statusString = "Updated alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity.ok(statusString)
+            }
         }
     }
 
