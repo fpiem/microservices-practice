@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository
 @Repository
 interface WarehouseRepository : MongoRepository<Warehouse, String> {
     // TODO: check if String is fine or ObjectId is needed instead
-    fun getWarehouseById(warehouseId: String): Warehouse?
+    fun getWarehouseByWarehouseId(warehouseId: String): Warehouse?
 }

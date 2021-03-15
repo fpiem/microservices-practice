@@ -6,8 +6,6 @@ import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.repository.WarehouseRepository
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
-import org.bson.types.ObjectId
-import org.mapstruct.Mapper
 import org.slf4j.LoggerFactory
 import org.springframework.stereotype.Service
 
@@ -27,14 +25,44 @@ class WarehouseService (val warehouseRepository: WarehouseRepository, val mapper
         }
     }
 
-    fun editAlarm(warehouseId: String, productAlarm: WarehouseAlarmDTO): String {
-        LOGGER.info("Received request to edit ${productAlarm.productId} alarm in $warehouseId")
-        val warehouse = warehouseRepository.getWarehouseById(warehouseId)
+    fun editProduct(warehouseId: String, warehouseProductDTO: WarehouseProductDTO): String {
+        LOGGER.info("Received request to edit product ${warehouseProductDTO.productId} alarm in $warehouseId")
+        val warehouse = warehouseRepository.getWarehouseByWarehouseId(warehouseId)
+        if (warehouse == null) {
+            LOGGER.info("Could not find warehouse $warehouseId")
+            return "warehouse not found"
+        } else {
+            val newWarehouseProduct = mapper.toModel(warehouseProductDTO)
+            val (index, oldWarehouseProduct) = findWarehouseProduct(
+                warehouse, newWarehouseProduct.productId
+            ) ?: Pair(null, null)
+
+            oldWarehouseProduct?.let {
+                newWarehouseProduct.alarmThreshold = it.alarmThreshold
+                warehouse.inventory[index!!] = newWarehouseProduct
+                warehouseRepository.save(warehouse)
+                LOGGER.info("Updated product ${newWarehouseProduct.productId} in warehouse $warehouse")
+                return "product updated"
+            } ?: kotlin.run {
+                LOGGER.info(
+                    "Could not find product ${newWarehouseProduct.productId} in warehouse $warehouse, adding it"
+                )
+                warehouse.inventory.add(newWarehouseProduct)
+                warehouseRepository.save(warehouse)
+                LOGGER.info("Added product ${newWarehouseProduct.productId} to warehouse $warehouse")
+                return "product added"
+            }
+        }
+    }
+
+    fun editAlarm(warehouseId: String, warehouseAlarmDTO: WarehouseAlarmDTO): String {
+        LOGGER.info("Received request to edit ${warehouseAlarmDTO.productId} alarm in $warehouseId")
+        val warehouse = warehouseRepository.getWarehouseByWarehouseId(warehouseId)
         if (warehouse == null) {
             LOGGER.info("Could not find warehouse $warehouseId")
             return "could not find warehouse"
         } else {
-            val newWarehouseProduct = mapper.toModel(productAlarm)
+            val newWarehouseProduct = mapper.toModel(warehouseAlarmDTO)
             val (index, oldWarehouseProduct) = findWarehouseProduct(
                 warehouse, newWarehouseProduct.productId
             ) ?: Pair(null, null)
@@ -49,6 +77,7 @@ class WarehouseService (val warehouseRepository: WarehouseRepository, val mapper
                 return "success"
             } ?: kotlin.run {
                 LOGGER.info("Could not find product ${newWarehouseProduct.productId} in warehouse $warehouseId")
+                // If product is missing, it is **not** created in this case
                 return "could not find product"
             }
         }

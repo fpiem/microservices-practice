@@ -4,13 +4,10 @@ import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.DeliveryDTO
 import it.polito.ap.common.dto.WarehouseAlarmDTO
 import it.polito.ap.common.dto.WarehouseProductDTO
-import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.service.WarehouseService
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
-import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -32,31 +29,48 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
     @PutMapping("/{warehouseId}/product")
     fun editProduct(
         @PathVariable warehouseId: String,
-        @RequestBody product: WarehouseProductDTO
+        @RequestBody warehouseProductDTO: WarehouseProductDTO
     ): ResponseEntity<String> {
-        LOGGER.info("Received request for edit ${product.productId} in $warehouseId")
-        return ResponseEntity.ok("ciao")
+        LOGGER.info("Received request for edit ${warehouseProductDTO.productId} in $warehouseId")
+        when (warehouseService.editProduct(warehouseId, warehouseProductDTO)) {
+            "product updated" -> {
+                val statusString = "Updated product ${warehouseProductDTO.productId} in warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity.ok(statusString)
+            }
+            "product added" -> {
+                val statusString = "Added product ${warehouseProductDTO.productId} to warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity.ok(statusString)
+            }
+            else -> {  // Warehouse not found
+                val statusString = "Could not find warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+        }
     }
 
     @PutMapping("/{warehouseId}/alarm")
     fun editAlarm(
         @PathVariable warehouseId: String,
-        @RequestParam productAlarm: WarehouseAlarmDTO
+        @RequestBody warehouseAlarmDTO: WarehouseAlarmDTO
     ): ResponseEntity<String> {
-        LOGGER.info("Received request for edit ${productAlarm.productId} alarm in $warehouseId")
-        when (warehouseService.editAlarm(warehouseId, productAlarm)) {
+        println("HERE")
+        LOGGER.info("Received request for edit ${warehouseAlarmDTO.productId} alarm in $warehouseId")
+        when (warehouseService.editAlarm(warehouseId, warehouseAlarmDTO)) {
             "could not find warehouse" -> {
                 val statusString = "Could not find warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
             "could not find product" -> {
-                val statusString = "Could not find product ${productAlarm.productId} in warehouse $warehouseId"
+                val statusString = "Could not find product ${warehouseAlarmDTO.productId} in warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
             else -> {  // Success
-                val statusString = "Updated alarm threshold for product ${productAlarm.productId} in warehouse $warehouseId"
+                val statusString = "Updated alarm threshold for product ${warehouseAlarmDTO.productId} in warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity.ok(statusString)
             }
