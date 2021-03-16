@@ -1,6 +1,5 @@
 package it.polito.ap.catalogservice.config
 
-import it.polito.ap.catalogservice.config.CustomAuthenticationProvider
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpMethod
@@ -15,13 +14,9 @@ import org.springframework.security.crypto.password.PasswordEncoder
 @Configuration
 class SecurityConfig(val customAuthenticationProvider: CustomAuthenticationProvider) : WebSecurityConfigurerAdapter(){
 
-
-
-
     @Bean
     fun encoder(): PasswordEncoder {
-        val enc = BCryptPasswordEncoder()
-        return enc
+        return BCryptPasswordEncoder()
     }
 
     @Throws(Exception::class)
