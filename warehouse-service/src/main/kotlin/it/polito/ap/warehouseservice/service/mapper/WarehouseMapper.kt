@@ -8,9 +8,9 @@ import org.mapstruct.Mapper
 @Mapper(componentModel = "spring")
 interface WarehouseMapper {
 
-    fun toAlarmDTO(warehouseProduct: WarehouseProduct): WarehouseAlarmDTO
-    fun toWarehouseDTO(warehouseProduct: WarehouseProduct): WarehouseProductDTO
+    fun toWarehouseAlarmDTO(warehouseProduct: WarehouseProduct): WarehouseAlarmDTO
+    fun toWarehouseProductDTO(warehouseProduct: WarehouseProduct): WarehouseProductDTO
+    fun toProductDTOList(inventory: List<WarehouseProduct>): List<WarehouseProductDTO>
     fun toModel(warehouseProductDTO: WarehouseProductDTO): WarehouseProduct
     fun toModel(warehouseAlarmDTO: WarehouseAlarmDTO): WarehouseProduct
-
 }

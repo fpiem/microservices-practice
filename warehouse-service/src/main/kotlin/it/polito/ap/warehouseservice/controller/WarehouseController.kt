@@ -1,9 +1,6 @@
 package it.polito.ap.warehouseservice.controller
 
-import it.polito.ap.common.dto.CartProductDTO
-import it.polito.ap.common.dto.DeliveryDTO
-import it.polito.ap.common.dto.WarehouseAlarmDTO
-import it.polito.ap.common.dto.WarehouseProductDTO
+import it.polito.ap.common.dto.*
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.service.WarehouseService
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
@@ -21,9 +18,17 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
     }
 
     @GetMapping("/{warehouseId}")
-    fun warehouseInventory(@PathVariable warehouseId: String): ResponseEntity<String> {
-        LOGGER.info("Received request for $warehouseId")
-        return ResponseEntity.ok("ciao")
+    fun warehouseInventory(@PathVariable warehouseId: String): ResponseEntity<List<WarehouseProductDTO>> {
+        // TODO: should something other than null be returned in case warehouse is not found?
+        LOGGER.info("Received request for the inventory of warehouse $warehouseId")
+        val inventory = warehouseService.warehouseInventory(warehouseId)
+        inventory?.let {
+            LOGGER.info("Retrieved inventory of warehouse $warehouseId")
+            return ResponseEntity.ok(inventory)
+        } ?: kotlin.run {
+            LOGGER.info("Could not find warehouse $warehouseId")
+            return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+        }
     }
 
     @PutMapping("/{warehouseId}/product")
@@ -85,7 +90,7 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
 
     @GetMapping("/test")
     fun test(@RequestBody warehouseProduct: WarehouseProduct): ResponseEntity<WarehouseAlarmDTO> {
-        return ResponseEntity.ok(mapper.toAlarmDTO(warehouseProduct))
+        return ResponseEntity.ok(mapper.toWarehouseAlarmDTO(warehouseProduct))
     }
 
 }

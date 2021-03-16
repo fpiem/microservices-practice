@@ -2,6 +2,7 @@ package it.polito.ap.warehouseservice.service
 
 import it.polito.ap.common.dto.WarehouseAlarmDTO
 import it.polito.ap.common.dto.WarehouseProductDTO
+import it.polito.ap.warehouseservice.controller.WarehouseController
 import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.repository.WarehouseRepository
@@ -22,6 +23,18 @@ class WarehouseService (val warehouseRepository: WarehouseRepository, val mapper
             null
         } else {
             Pair(index, warehouse.inventory[index])
+        }
+    }
+
+    fun warehouseInventory(warehouseId: String): List<WarehouseProductDTO>? {
+        LOGGER.info("Received request for the inventory of warehouse $warehouseId")
+        val warehouse = warehouseRepository.getWarehouseByWarehouseId(warehouseId)
+        warehouse?.let {
+            LOGGER.info("Retrieved inventory of warehouse $warehouseId")
+            return mapper.toProductDTOList(warehouse.inventory)
+        }?:kotlin.run {
+            LOGGER.info("Could not find warehouse $warehouseId")
+            return null
         }
     }
 
