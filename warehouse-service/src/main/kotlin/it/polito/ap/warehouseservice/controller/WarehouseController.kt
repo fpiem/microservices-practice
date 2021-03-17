@@ -48,6 +48,16 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
                 LOGGER.info(statusString)
                 return ResponseEntity.ok(statusString)
             }
+            "alarm threshold not set" -> {
+                val statusString = "Alarm threshold not set, could not create product ${warehouseProductDTO.productId}"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "insufficient product quantity" -> {
+                val statusString = "Insufficient quantity of product ${warehouseProductDTO.productId} in warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
             else -> {  // Warehouse not found
                 val statusString = "Could not find warehouse $warehouseId"
                 LOGGER.info(statusString)
@@ -89,8 +99,8 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
     }
 
     @GetMapping("/test")
-    fun test(@RequestBody warehouseProduct: WarehouseProduct): ResponseEntity<WarehouseAlarmDTO> {
-        return ResponseEntity.ok(mapper.toWarehouseAlarmDTO(warehouseProduct))
+    fun test() {
+        warehouseService.test()
     }
 
 }

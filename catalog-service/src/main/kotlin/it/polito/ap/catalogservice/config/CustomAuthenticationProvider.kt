@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component
 class CustomAuthenticationProvider (val userRepository: UserRepository): AuthenticationProvider {
 
     companion object {
-        private val LOGGER
-                = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
 
     @Autowired
