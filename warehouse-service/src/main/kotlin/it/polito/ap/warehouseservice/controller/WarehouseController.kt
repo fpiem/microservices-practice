@@ -1,7 +1,6 @@
 package it.polito.ap.warehouseservice.controller
 
 import it.polito.ap.common.dto.*
-import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.service.WarehouseService
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
 import org.slf4j.LoggerFactory
@@ -15,6 +14,40 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(javaClass)
+    }
+
+    @PostMapping("/{warehouseId}")
+    fun createProduct(
+        @PathVariable warehouseId: String, @RequestBody warehouseProductDTO: WarehouseProductDTO
+    ): ResponseEntity<String> {
+        LOGGER.info("Received request to add new product with Id ${warehouseProductDTO.productId} in warehouse $warehouseId")
+        when (warehouseService.addProduct(warehouseId, warehouseProductDTO)) {
+            "warehouse not found" -> {
+                val statusString = "Could not find warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "negative product quantity" -> {
+                val statusString = "Product quantity must be non-negative"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "negative alarm threshold" -> {
+                val statusString = "Alarm threshold must be non-negative"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "product added" -> {
+                val statusString = "Product ${warehouseProductDTO.productId} successfully added to $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity.ok(statusString)
+            }
+            else -> {
+                val statusString = "Could not add product - generic error"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+        }
     }
 
     @GetMapping("/{warehouseId}")
@@ -58,8 +91,13 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
-            else -> {  // Warehouse not found
+            "warehouse not found" -> {  // Warehouse not found
                 val statusString = "Could not find warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            else -> {  // Warehouse not found
+                val statusString = "Could not update - general error"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
@@ -69,25 +107,34 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
     @PutMapping("/{warehouseId}/alarm")
     fun editAlarm(
         @PathVariable warehouseId: String,
-        @RequestBody warehouseAlarmDTO: WarehouseAlarmDTO
+        @RequestBody warehouseProductDTO: WarehouseProductDTO
     ): ResponseEntity<String> {
-        println("HERE")
-        LOGGER.info("Received request for edit ${warehouseAlarmDTO.productId} alarm in $warehouseId")
-        when (warehouseService.editAlarm(warehouseId, warehouseAlarmDTO)) {
-            "could not find warehouse" -> {
+        LOGGER.info("Received request for edit ${warehouseProductDTO.productId} alarm in $warehouseId")
+        when (warehouseService.editAlarm(warehouseId, warehouseProductDTO)) {
+            "warehouse not found" -> {
                 val statusString = "Could not find warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
-            "could not find product" -> {
-                val statusString = "Could not find product ${warehouseAlarmDTO.productId} in warehouse $warehouseId"
+            "negative alarm threshold" -> {
+                val statusString = "Alarm threshold must be non-negative"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
-            else -> {  // Success
-                val statusString = "Updated alarm threshold for product ${warehouseAlarmDTO.productId} in warehouse $warehouseId"
+            "product not found" -> {
+                val statusString = "Could not find product ${warehouseProductDTO.productId} in warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "alarm updated" -> {  // Success
+                val statusString = "Updated alarm threshold for product ${warehouseProductDTO.productId} in warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity.ok(statusString)
+            }
+            else -> {
+                val statusString = "Could not update - general error"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
         }
     }
@@ -96,11 +143,6 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
     fun deliveryList(@RequestBody cart: List<CartProductDTO>): ResponseEntity<List<DeliveryDTO>> {
         LOGGER.info("Received request for delivery list for cart $cart")
         return ResponseEntity.badRequest().body(null)
-    }
-
-    @GetMapping("/test")
-    fun test() {
-        warehouseService.test()
     }
 
 }
