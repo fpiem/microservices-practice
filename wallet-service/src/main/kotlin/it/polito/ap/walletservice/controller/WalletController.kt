@@ -30,8 +30,16 @@ class WalletController(val walletService: WalletService) {
     }
 
     @GetMapping("/{userId}/transactions")
-    fun transactionList(@PathVariable userId: String): ResponseEntity<List<Transaction>> {
-        return ResponseEntity.badRequest().body(null)
+    fun transactionList(@PathVariable userId: String): ResponseEntity<List<TransactionDTO>> {
+        LOGGER.info("Received request for the transaction list of user $userId")
+        val transactionList = walletService.transactionList(userId)
+        transactionList?.let {
+            LOGGER.info("Retrieved the transaction list of user $userId")
+            return ResponseEntity.ok(transactionList)
+        } ?: kotlin.run {
+            LOGGER.info("Could not find wallet for user $userId")
+            return ResponseEntity(null, HttpStatus.NOT_FOUND)
+        }
     }
 
     @PutMapping("/{userId}/transactions")

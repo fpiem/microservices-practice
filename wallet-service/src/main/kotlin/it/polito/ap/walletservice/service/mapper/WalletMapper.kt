@@ -8,5 +8,6 @@ import org.mapstruct.Mapper
 interface WalletMapper {
 
     fun toModel(transactionDTO: TransactionDTO): Transaction
+    fun toDTO(transaction: Transaction): TransactionDTO
 
 }

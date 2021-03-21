@@ -2,6 +2,7 @@ package it.polito.ap.walletservice.service
 
 import it.polito.ap.common.dto.TransactionDTO
 import it.polito.ap.common.utils.TransactionMotivation
+import it.polito.ap.walletservice.model.Transaction
 import it.polito.ap.walletservice.model.Wallet
 import it.polito.ap.walletservice.repository.WalletRepository
 import it.polito.ap.walletservice.service.mapper.WalletMapper
@@ -46,9 +47,14 @@ class WalletService(
         }
     }
 
+    fun transactionList(userId: String): List<TransactionDTO>? {
+        LOGGER.debug("Received request for the transaction list of user $userId")
+        val wallet = getWalletByUserId(userId)
+        return wallet?.transactionList?.map { mapper.toDTO(it) }
+    }
+
     fun addTransaction(userId: String, transactionDTO: TransactionDTO): Double? {
         LOGGER.debug("Received request to add a transaction to the wallet of user $userId")
-
         val transaction = mapper.toModel(transactionDTO)
 
         val query = Query()
@@ -72,7 +78,6 @@ class WalletService(
             LOGGER.debug("Transaction failed")
         }
         return wallet?.funds
-        println("Quack")
     }
 
 }
