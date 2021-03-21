@@ -12,8 +12,7 @@ import org.springframework.web.client.RestTemplate
 @RequestMapping("/products")
 class ProductController (val productService: ProductService) {
     companion object {
-        private val LOGGER
-                = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
 
     @GetMapping("")

@@ -6,4 +6,7 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface WalletRepository: MongoRepository<Wallet, String> {
+
+    fun getWalletByUserId(userId: String): Wallet?
+
 }
