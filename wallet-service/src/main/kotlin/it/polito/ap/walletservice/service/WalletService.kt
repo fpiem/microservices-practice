@@ -37,6 +37,26 @@ class WalletService(
         }
     }
 
+    // TODO: Kafka
+    fun rollbackTransaction(userId: String, orderId: String): String {
+        LOGGER.debug("Received request to rollback order $orderId for user $userId")
+        val wallet = getWalletByUserId(userId) ?: return "could not find wallet"
+        val relevantTransactions = wallet.transactionList.filter { it.issuerId == orderId }
+        return when {
+            relevantTransactions.isEmpty() -> { "order not found" }
+            relevantTransactions.size > 1 -> { "already refunded" }
+            else -> {
+                val rollbackTransactionDTO = TransactionDTO(
+                    orderId,
+                    -relevantTransactions[0].amount,
+                    TransactionMotivation.AUTOMATED_REFUND
+                )
+                val updatedFunds = addTransaction(userId, rollbackTransactionDTO)
+                "refund completed - $updatedFunds"
+            }
+        }
+    }
+
     fun availableFunds(userId: String): Double? {
         LOGGER.debug("Received request to retrieve the funds of user $userId")
         val wallet = getWalletByUserId(userId)
