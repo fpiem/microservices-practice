@@ -26,12 +26,9 @@ class CustomAuthenticationProvider (val userRepository: UserRepository): Authent
         LOGGER.info("authentication user ${authentication.name},${authentication.credentials} -> ${encoder.encode(authentication.credentials.toString())}")
         val user = userRepository.findByEmailAndPassword(authentication.name, authentication.credentials.toString())
         user?.let {
-            /*
             val authorities = setOf(SimpleGrantedAuthority(user.role.toString()))
             LOGGER.info("found user ${user.name}, ${user.surname}, $authorities")
             return UsernamePasswordAuthenticationToken(user, authentication.name, authorities)
-            */
-            return null // TODO far funzionare role
         } ?: kotlin.run {
             LOGGER.info("user not found into the DB")
             return null

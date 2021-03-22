@@ -1,20 +1,34 @@
 package it.polito.ap.catalogservice.service
 
 import it.polito.ap.catalogservice.model.Product
+import it.polito.ap.catalogservice.model.User
 import it.polito.ap.catalogservice.repository.ProductRepository
+import it.polito.ap.catalogservice.service.mapper.UserMapper
+import it.polito.ap.common.dto.CartProductDTO
+import it.polito.ap.common.dto.OrderDTO
+import it.polito.ap.common.dto.OrderPlacingDTO
 import org.slf4j.LoggerFactory
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Service
+import org.springframework.web.client.RestTemplate
 import java.util.*
+import org.springframework.http.HttpEntity
+import org.springframework.http.HttpMethod
+
+import org.springframework.http.ResponseEntity
+import org.springframework.http.HttpStatus
+
 
 @Service
-class ProductService (val productRepository: ProductRepository){
+class ProductService(val productRepository: ProductRepository, val userService: UserService, val userMapper: UserMapper) {
     companion object {
-        private val LOGGER
-                = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
 
     // check if product already exists, if not product is added
-    fun addProduct(product: Product) : String {
+    fun addProduct(product: Product): String {
         LOGGER.debug("received request to add product ${product.name}")
         if (product.name.isBlank()) {
             LOGGER.debug("product name must be well formed (not empty or blank)")
@@ -52,14 +66,14 @@ class ProductService (val productRepository: ProductRepository){
         return productRepository.findAll()
     }
 
-    fun deleteProductById(productId: String){
+    fun deleteProductById(productId: String) {
         LOGGER.debug("received request to delete product with id $productId")
         productRepository.deleteById(productId)
     }
 
     fun editProduct(productId: String, newProduct: Product): Product? {
         val product = getProductById(productId)
-        if (product.isEmpty){ // if not present it doesn't create a new product. For this use addProduct
+        if (product.isEmpty) { // if not present it doesn't create a new product. For this use addProduct
             LOGGER.debug("received request to edit a product that in not present in the DB: $productId")
             return null
         }
@@ -78,4 +92,47 @@ class ProductService (val productRepository: ProductRepository){
         return product.get()
     }
 
+    // TODO valutare del refactoring per questa funzione (placeOrder)
+    fun placeOrder(cart: List<CartProductDTO>, shippingAddress: String, authentication: Authentication): OrderDTO? {
+        // get user info
+        val authenticationUser = authentication.principal as User
+        val user = userService.getUserByEmail(authenticationUser.email)
+        if (user == null) { // if user not exists return null
+            LOGGER.debug("User not found, can't place order")
+            return null
+        }
+        LOGGER.info("Received request to place an order for user ${user.email}")
+        val userDTO = userMapper.toUserDTO(user)
+
+        // update product prices in cart
+        cart.forEach {
+            val product = getProductById(it.productDTO.productId)
+            if (product.isEmpty) {
+                LOGGER.debug("received request to place a order but a product is not present in the DB: ${it.productDTO.productId}")
+                return null
+            }
+            it.productDTO.price = product.get().price
+        }
+
+        // send info to order-service
+        val restTemplate = RestTemplate()
+        val headers = HttpHeaders()
+        headers.contentType = MediaType.APPLICATION_JSON
+
+        val orderPlacingDTO = OrderPlacingDTO(cart, userDTO, shippingAddress)
+
+        val requestEntity = HttpEntity<OrderPlacingDTO>(orderPlacingDTO, headers)
+        val responseEntity: ResponseEntity<OrderDTO> = restTemplate.exchange(
+            "http://localhost:8082/orders",
+            HttpMethod.POST,
+            requestEntity,
+            OrderDTO::class.java
+        )
+
+        val statusCode = responseEntity.statusCode
+        if (statusCode == HttpStatus.OK) {
+            return responseEntity.body
+        }
+        return null
+    }
 }

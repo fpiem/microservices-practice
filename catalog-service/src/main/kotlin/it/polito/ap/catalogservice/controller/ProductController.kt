@@ -2,9 +2,12 @@ package it.polito.ap.catalogservice.controller
 
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.service.ProductService
+import it.polito.ap.common.dto.CartProductDTO
+import it.polito.ap.common.dto.OrderDTO
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.client.RestTemplate
 
@@ -62,6 +65,24 @@ class ProductController(val productService: ProductService) {
         LOGGER.info("received request to delete the product with id $productId")
         productService.deleteProductById(productId)
         return ResponseEntity.ok("Deletion of product with id $productId completed")
+    }
+
+    // TODO capire se si possono passare più parametri come request body
+    @PostMapping("/placeOrder")
+    fun placeOrder(
+        @RequestBody cart: List<CartProductDTO>,
+        authentication: Authentication,
+        @RequestParam shippingAddress: String
+    ): ResponseEntity<OrderDTO> {
+        LOGGER.info("received request to place a order")
+        val order = productService.placeOrder(cart, shippingAddress, authentication)
+        order?.let {
+            LOGGER.info("order placed with ID: ${order.orderId}")
+            return ResponseEntity.ok(order)
+        } ?: kotlin.run {
+            LOGGER.info("cannot place order")
+            return ResponseEntity.badRequest().body(null)
+        }
     }
 
     @GetMapping("/test")
