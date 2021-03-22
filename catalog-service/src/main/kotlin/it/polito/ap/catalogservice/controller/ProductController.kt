@@ -10,7 +10,7 @@ import org.springframework.web.client.RestTemplate
 
 @RestController
 @RequestMapping("/products")
-class ProductController (val productService: ProductService) {
+class ProductController(val productService: ProductService) {
     companion object {
         private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
@@ -18,8 +18,8 @@ class ProductController (val productService: ProductService) {
     @GetMapping("")
     fun getAll(): ResponseEntity<List<Product>> {
         LOGGER.info("received request to retrieve all the product")
-        var products = productService.getAll()
-        if(products.isEmpty()){
+        val products = productService.getAll()
+        if (products.isEmpty()) {
             LOGGER.info("found no product")
             return ResponseEntity(null, HttpStatus.NOT_FOUND)
         }
@@ -30,7 +30,7 @@ class ProductController (val productService: ProductService) {
     @GetMapping("/{productName}")
     fun getProductByName(@PathVariable productName: String): ResponseEntity<Product> {
         LOGGER.info("received request for $productName")
-        var product = productService.getProductByName(productName)
+        val product = productService.getProductByName(productName)
         product?.let {
             LOGGER.info("found product $productName")
             return ResponseEntity.ok(product)
@@ -41,8 +41,7 @@ class ProductController (val productService: ProductService) {
     @PostMapping("")
     fun addProduct(@RequestBody product: Product): ResponseEntity<String> {
         LOGGER.info("received request to add product ${product.name}")
-        productService.addProduct(product)
-        return ResponseEntity.ok("Product ${product.name} added successfully with id ${product.name}")
+        return ResponseEntity.ok(productService.addProduct(product))
     }
 
     @PutMapping("/{productId}")
@@ -60,13 +59,13 @@ class ProductController (val productService: ProductService) {
 
     @DeleteMapping("/{productId}")
     fun deleteProductById(@PathVariable productId: String): ResponseEntity<String> {
-        LOGGER.info("received request to delete the product with id ${productId}")
+        LOGGER.info("received request to delete the product with id $productId")
         productService.deleteProductById(productId)
-        return ResponseEntity.ok("Deletion of product with id ${productId} completed")
+        return ResponseEntity.ok("Deletion of product with id $productId completed")
     }
 
     @GetMapping("/test")
-    fun test() : ResponseEntity<String> {
+    fun test(): ResponseEntity<String> {
         LOGGER.info("test comunication")
         val restTemplate = RestTemplate()
         val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
