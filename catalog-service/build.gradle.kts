@@ -5,6 +5,7 @@ plugins {
     id("io.spring.dependency-management") version "1.0.11.RELEASE"
     kotlin("jvm") version "1.4.30"
     kotlin("plugin.spring") version "1.4.30"
+    kotlin("kapt") version "1.4.30"
 }
 
 group = "it.polito.ap"
@@ -26,6 +27,12 @@ dependencies {
     testImplementation("org.springframework.security:spring-security-test")
 
     implementation(project(":common"))
+
+    implementation ("org.mapstruct:mapstruct:1.4.2.Final")
+    compileOnly("org.mapstruct:mapstruct-processor:1.4.2.Final")
+    annotationProcessor ("org.mapstruct:mapstruct-processor:1.4.2.Final")
+
+    kapt("org.springframework.boot:spring-boot-configuration-processor")
 }
 
 tasks.withType<KotlinCompile> {
