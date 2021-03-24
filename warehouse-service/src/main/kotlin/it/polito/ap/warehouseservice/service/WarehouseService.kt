@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service
 class WarehouseService(val warehouseRepository: WarehouseRepository, val mapper: WarehouseMapper) {
 
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(WarehouseService::class.java)
     }
 
     // TODO: add cache
@@ -67,7 +67,7 @@ class WarehouseService(val warehouseRepository: WarehouseRepository, val mapper:
         warehouse?.let {
             LOGGER.debug("Retrieved inventory of warehouse $warehouseId")
             return mapper.toProductDTOList(warehouse.inventory)
-        }?:kotlin.run {
+        } ?: kotlin.run {
             LOGGER.debug("Could not find warehouse $warehouseId")
             return null
         }

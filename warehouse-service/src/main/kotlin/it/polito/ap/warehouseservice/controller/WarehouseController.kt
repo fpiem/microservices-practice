@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.*
 class WarehouseController(val warehouseService: WarehouseService, var mapper: WarehouseMapper) {
 
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(WarehouseController::class.java)
     }
 
     @PostMapping("/{warehouseId}")
@@ -139,7 +139,8 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
         }
     }
 
-    @GetMapping("")
+    // TODO: info on orderId? Brutto, introduce coupling, ma non saprei come altro fare
+    @GetMapping("/deliveries")
     fun deliveryList(@RequestBody cart: List<CartProductDTO>): ResponseEntity<List<DeliveryDTO>> {
         LOGGER.info("Received request for delivery list for cart $cart")
         return ResponseEntity.badRequest().body(null)
