@@ -1,6 +1,10 @@
 ### TODO List
 
-- [ ] Do a TODO List
+- In warehouseservice, database di pickups (solo per differenziare dalle delivery dell'orderservice)
+- chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)
+- **PROBLEMA** per prof Forno, e se muoio esattamente inviando?
+- Serve un ACK message dall'orderservice? Tipo "confirm messages received" da Kafka per cambiare lo stato nel DB di pickups?
+- Il vantaggio del db di pickup é che siamo in grado di tornare indietro se falliamo durante la selezione degli items dalla warehouse
 
 ### DONE
 
