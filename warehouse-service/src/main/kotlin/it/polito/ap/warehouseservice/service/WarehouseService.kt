@@ -1,29 +1,28 @@
 package it.polito.ap.warehouseservice.service
 
-import com.mongodb.internal.client.model.FindOptions
 import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.DeliveryDTO
 import it.polito.ap.common.dto.ProductDTO
 import it.polito.ap.common.dto.WarehouseProductDTO
 import it.polito.ap.warehouseservice.model.Warehouse
-import it.polito.ap.warehouseservice.model.Warehouse2
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.model.WarehouseTransaction
+import it.polito.ap.warehouseservice.model.WarehouseUnwind
 import it.polito.ap.warehouseservice.model.utils.WarehouseTransactionStatus
 import it.polito.ap.warehouseservice.repository.WarehouseRepository
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
-import org.bson.types.ObjectId
+import org.bson.Document
 import org.slf4j.LoggerFactory
-import org.springframework.data.domain.Sort
 import org.springframework.data.mongodb.core.FindAndModifyOptions
-import org.springframework.data.mongodb.core.MongoActionOperation
-import org.springframework.data.mongodb.core.MongoOperations
 import org.springframework.data.mongodb.core.MongoTemplate
-import org.springframework.data.mongodb.core.aggregation.*
+import org.springframework.data.mongodb.core.aggregation.Aggregation
+import org.springframework.data.mongodb.core.aggregation.AggregationExpression
+import org.springframework.data.mongodb.core.aggregation.AggregationResults
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Service
+import java.util.*
 
 @Service
 class WarehouseService(
@@ -95,18 +94,32 @@ class WarehouseService(
         LOGGER.debug(
             "Received request to update product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}"
         )
-        val product = warehouse.inventory.firstOrNull {it.productId == warehouseProduct.productId}
+        val product = warehouse.inventory.firstOrNull { it.productId == warehouseProduct.productId }
         if (product == null) {
             LOGGER.debug("Could not find product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}")
             return "product not found"
         }
         val aggregation = Aggregation.newAggregation(
-            SortOperation(Sort.by("name"))
+            Aggregation.match(Criteria.where("_id").`is`(warehouse.warehouseId)),
+            Aggregation.unwind("inventory"),
+            Aggregation.match(
+                Criteria.where("inventory.productId").`is`(warehouseProduct.productId)
+                    .and("inventory.quantity").gte(-warehouseProduct.quantity)
+            )
         )
 
-        val output1: AggregationResults<Warehouse> = mongoTemplate.aggregate(aggregation, "warehouse", Warehouse::class.java)
+        /*
+        Aggregation.project("inventory.quantity").and {
+                Document(
+                    "\$add",
+                    listOf("inventory.quantity", "${warehouseProduct.quantity}")
+                )
+            }
+         */
 
-        println("Siamo qui")
+        val output1: AggregationResults<WarehouseUnwind> =
+            mongoTemplate.aggregate(aggregation, "warehouse", WarehouseUnwind::class.java)
+
 
         return "null"
 //            Aggregation.match(Criteria.where("name").`is`("warehouse1")),
@@ -224,7 +237,7 @@ class WarehouseService(
 
     fun createDeliveryList(cart: List<CartProductDTO>): List<DeliveryDTO>? {
         val deliveryList = mutableListOf<DeliveryDTO>()
-        val orderItems = cart.associateBy({it.productDTO.productId}, {it.quantity}).toMutableMap()
+        val orderItems = cart.associateBy({ it.productDTO.productId }, { it.quantity }).toMutableMap()
 
         while (orderItems.values.sum() > 0) {
             val mostRequestedProductId = orderItems.maxByOrNull { it.value }!!.key
