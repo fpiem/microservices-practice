@@ -8,10 +8,10 @@ import org.springframework.data.mongodb.core.mapping.Document
 
 @Document
 class Order(
-    val cart: MutableList<CartElement>,
-    val buyer: String, // equals to email
-    val deliveryList: List<Delivery>,
-    var status: StatusType,
+    var cart: MutableList<CartElement>? = null,
+    var buyer: String?= "", // equals to email
+    var deliveryList: List<Delivery>? = null,
+    var status: StatusType = StatusType.PAID,
     @Id
     val orderId: ObjectId = ObjectId()
 )
