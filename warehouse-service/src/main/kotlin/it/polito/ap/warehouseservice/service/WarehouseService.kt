@@ -1,18 +1,36 @@
 package it.polito.ap.warehouseservice.service
 
+import com.mongodb.internal.client.model.FindOptions
 import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.DeliveryDTO
 import it.polito.ap.common.dto.ProductDTO
 import it.polito.ap.common.dto.WarehouseProductDTO
 import it.polito.ap.warehouseservice.model.Warehouse
+import it.polito.ap.warehouseservice.model.Warehouse2
 import it.polito.ap.warehouseservice.model.WarehouseProduct
+import it.polito.ap.warehouseservice.model.WarehouseTransaction
+import it.polito.ap.warehouseservice.model.utils.WarehouseTransactionStatus
 import it.polito.ap.warehouseservice.repository.WarehouseRepository
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
+import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
+import org.springframework.data.domain.Sort
+import org.springframework.data.mongodb.core.FindAndModifyOptions
+import org.springframework.data.mongodb.core.MongoActionOperation
+import org.springframework.data.mongodb.core.MongoOperations
+import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.aggregation.*
+import org.springframework.data.mongodb.core.query.Criteria
+import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Service
 
 @Service
-class WarehouseService(val warehouseRepository: WarehouseRepository, val mapper: WarehouseMapper) {
+class WarehouseService(
+    val warehouseRepository: WarehouseRepository,
+    val mapper: WarehouseMapper,
+    val mongoTemplate: MongoTemplate
+) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(WarehouseService::class.java)
@@ -77,18 +95,56 @@ class WarehouseService(val warehouseRepository: WarehouseRepository, val mapper:
         LOGGER.debug(
             "Received request to update product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}"
         )
-        val index = warehouse.inventory.indexOfFirst {it.productId == warehouseProduct.productId}
-        if (index == -1) {
+        val product = warehouse.inventory.firstOrNull {it.productId == warehouseProduct.productId}
+        if (product == null) {
+            LOGGER.debug("Could not find product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}")
             return "product not found"
         }
-        warehouse.inventory[index].quantity += warehouseProduct.quantity
-        return if (warehouse.inventory[index].quantity < 0) {
-            LOGGER.debug("Not updating warehouse ${warehouse.warehouseId} - insufficient quantity of product ${warehouseProduct.productId}")
-            "insufficient product quantity"
-        } else {
-            persistWarehouse(warehouse)
-            "product updated"
-        }
+        val aggregation = Aggregation.newAggregation(
+            SortOperation(Sort.by("name"))
+        )
+
+        val output1: AggregationResults<Warehouse> = mongoTemplate.aggregate(aggregation, "porcodio", Warehouse::class.java)
+        println(output1.mappedResults)
+        println("Siamo qui")
+
+        return "null"
+//            Aggregation.match(Criteria.where("name").`is`("warehouse1")),
+////            Aggregation.unwind("inventory"),
+////            Aggregation.match(
+////                Criteria.where("productId").`is`(warehouseProduct.productId)
+////                    .and("quantity").gte(-warehouseProduct.quantity)
+////            ),
+////            Aggregation.project("name")
+//        )
+//        println(aggregation)
+//        val test: List<Warehouse> = mongoTemplate.aggregate(aggregation, "test", Warehouse::class.java).mappedResults
+
+//                .and("inventory.productId").`is`(warehouseProduct.productId)
+//                .and("inventory.quantity").gte(-warehouseProduct.quantity)
+//        )
+//        val transaction = WarehouseTransaction(
+//            null,
+//            mutableMapOf((warehouseProduct.productId to warehouseProduct.quantity)),
+//            WarehouseTransactionStatus.ADMIN_MODIFICATION
+//        )
+//        val update = Update().inc("inventory.quantity", warehouseProduct.quantity)
+//            .push("transactionList", transaction)
+//
+//        val updatedWarehouse = mongoTemplate.findAndModify(
+//            query, update, FindAndModifyOptions().returnNew(true), Warehouse::class.java
+//        )
+
+//        updatedWarehouse?.let {
+//            LOGGER.debug("Updated quantity of ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}")
+//            return "product edited"
+//        } ?: kotlin.run {
+//            LOGGER.debug(
+//                "Could not edit quantity of product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}"
+//            )
+//            return "failed to add transaction"
+//        }
+
     }
 
     private fun updateWarehouseProductAlarmThreshold(warehouse: Warehouse, warehouseProduct: WarehouseProduct): String {
@@ -113,11 +169,14 @@ class WarehouseService(val warehouseRepository: WarehouseRepository, val mapper:
 
     fun editProduct(warehouseId: String, warehouseProductDTO: WarehouseProductDTO): String {
         LOGGER.debug("Received request to edit product ${warehouseProductDTO.productId} alarm in $warehouseId")
+        // Additional read, but it allows us to differentiate between failures owed to warehouse not existing and the
+        // product not being present in the inventory
         val warehouse = getWarehouseByWarehouseId(warehouseId)
         warehouse?.let {
             val outcome = updateWarehouseProductQuantity(warehouse, mapper.toModel(warehouseProductDTO))
             if (outcome == "product not found") {
                 if (warehouseProductDTO.alarmThreshold >= 0) {
+                    // TODO: atomic
                     return addWarehouseProduct(warehouse, mapper.toModel(warehouseProductDTO))
                 }
                 return "alarm threshold not set"
@@ -182,6 +241,7 @@ class WarehouseService(val warehouseRepository: WarehouseRepository, val mapper:
 
     fun addProduct(warehouseId: String, warehouseProductDTO: WarehouseProductDTO): String {
         val warehouseProduct = mapper.toModel(warehouseProductDTO)
+        LOGGER.debug("Received request to add product ${warehouseProduct.productId} to warehouse $warehouseId")
         when {
             warehouseProduct.quantity < 0 -> {
                 return "negative product quantity"
@@ -190,11 +250,38 @@ class WarehouseService(val warehouseRepository: WarehouseRepository, val mapper:
                 return "negative alarm threshold"
             }
             else -> {
+                // Additional read, but it allows us to differentiate between failures owed to warehouse not existing
+                // and the product already being present
                 val warehouse = getWarehouseByWarehouseId(warehouseId)
-                warehouse?.let {
-                    return addWarehouseProduct(warehouse, warehouseProduct)
-                } ?: kotlin.run {
+                if (warehouse == null) {
+                    LOGGER.debug("Could not find warehouse $warehouseId")
                     return "warehouse not found"
+                }
+                val product = warehouse.inventory.firstOrNull { it.productId == warehouseProduct.productId }
+                if (product != null) {
+                    LOGGER.debug("Product ${warehouseProduct.productId} already present in warehouse $warehouseId")
+                    return "product already present"
+                }
+
+                val query = Query().addCriteria(Criteria.where("warehouseId").`is`(warehouseId))
+                println(query)
+
+                val transaction = WarehouseTransaction(
+                    null,
+                    mutableMapOf((warehouseProduct.productId to warehouseProduct.quantity)),
+                    WarehouseTransactionStatus.ADMIN_MODIFICATION
+                )
+                val update = Update().push("inventory", warehouseProduct).push("transactionList", transaction)
+                val updatedWarehouse = mongoTemplate.findAndModify(
+                    query, update, FindAndModifyOptions().returnNew(true), Warehouse::class.java
+                )
+
+                updatedWarehouse?.let {
+                    LOGGER.debug("Added product ${warehouseProduct.productId} to warehouse $warehouseId")
+                    return "product added"
+                } ?: kotlin.run {
+                    LOGGER.debug("Could not add product ${warehouseProduct.productId} to warehouse $warehouseId")
+                    return "failed to add transaction"
                 }
             }
         }

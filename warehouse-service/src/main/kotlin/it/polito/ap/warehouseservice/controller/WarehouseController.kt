@@ -20,10 +20,17 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
     fun createProduct(
         @PathVariable warehouseId: String, @RequestBody warehouseProductDTO: WarehouseProductDTO
     ): ResponseEntity<String> {
-        LOGGER.info("Received request to add new product with Id ${warehouseProductDTO.productId} in warehouse $warehouseId")
+        LOGGER.info(
+            "Received request to add new product with Id ${warehouseProductDTO.productId} in warehouse $warehouseId"
+        )
         when (warehouseService.addProduct(warehouseId, warehouseProductDTO)) {
             "warehouse not found" -> {
                 val statusString = "Could not find warehouse $warehouseId"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "product already present" -> {
+                val statusString = "Product ${warehouseProductDTO.productId} already present in warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
@@ -38,7 +45,7 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
             "product added" -> {
-                val statusString = "Product ${warehouseProductDTO.productId} successfully added to $warehouseId"
+                val statusString = "Product ${warehouseProductDTO.productId} successfully added to warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity.ok(statusString)
             }
@@ -69,7 +76,7 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
         @PathVariable warehouseId: String,
         @RequestBody warehouseProductDTO: WarehouseProductDTO
     ): ResponseEntity<String> {
-        LOGGER.info("Received request for edit ${warehouseProductDTO.productId} in $warehouseId")
+        LOGGER.info("Received request to edit ${warehouseProductDTO.productId} in $warehouseId")
         when (warehouseService.editProduct(warehouseId, warehouseProductDTO)) {
             "product updated" -> {
                 val statusString = "Updated product ${warehouseProductDTO.productId} in warehouse $warehouseId"

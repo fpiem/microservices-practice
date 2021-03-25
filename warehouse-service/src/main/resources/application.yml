@@ -2,5 +2,9 @@ spring:
   application:
     name: warehouse-service
 
+logging:
+  level:
+    it.polito.ap.warehouseservice: DEBUG
+
 server:
   port: 8084

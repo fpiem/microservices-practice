@@ -21,7 +21,8 @@ class WarehouseServiceApplication(
                 WarehouseProduct("prod1", 0, 5),
                 WarehouseProduct("prod2", 10, 3),
                 WarehouseProduct("prod3", 3, 4)
-            )
+            ),
+            mutableListOf()
         )
         val warehouse2 = Warehouse(
             ObjectId("222222222222222222222222"), "warehouse2",
@@ -29,7 +30,8 @@ class WarehouseServiceApplication(
                 WarehouseProduct("prod3", 3, 5),
                 WarehouseProduct("prod4", 7, 3),
                 WarehouseProduct("prod5", 3, 4)
-            )
+            ),
+            mutableListOf()
         )
         warehouseRepository.saveAll(listOf(warehouse1, warehouse2))
     }

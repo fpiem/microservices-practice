@@ -5,11 +5,10 @@ import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
 
 @Document
-class Warehouse(
+data class Warehouse2(
+    val name: String?,
+    var inventory: MutableList<WarehouseProduct>?,
+    var transactionList: MutableList<WarehouseTransaction>?,
     @Id
-    val warehouseId: ObjectId,
-    val name: String,
-    var inventory: MutableList<WarehouseProduct>,
-    var transactionList: MutableList<WarehouseTransaction>
+    val _id: ObjectId?
 )
-
