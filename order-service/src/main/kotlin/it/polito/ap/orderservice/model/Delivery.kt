@@ -8,10 +8,10 @@ import org.springframework.data.mongodb.core.mapping.Document
 
 @Document
 class Delivery (
-    var shippingAddress: String,
-    var deliveryProducts: MutableMap<String, Int>,
-    var order: Order,
-    var warehouse: String, // equals to warehouse name
+    var shippingAddress: String = "",
+    var deliveryProducts: MutableMap<String, Int> = mutableMapOf(),
+    var order: Order? = null,
+    var warehouse: String = "", // equals to warehouse name
     @Id
     val deliveryId: ObjectId = ObjectId()
 ){

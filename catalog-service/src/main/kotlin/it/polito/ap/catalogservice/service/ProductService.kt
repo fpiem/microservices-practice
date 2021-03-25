@@ -19,10 +19,16 @@ import org.springframework.http.HttpMethod
 
 import org.springframework.http.ResponseEntity
 import org.springframework.http.HttpStatus
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.HttpServerErrorException
 
 
 @Service
-class ProductService(val productRepository: ProductRepository, val userService: UserService, val userMapper: UserMapper) {
+class ProductService(
+    val productRepository: ProductRepository,
+    val userService: UserService,
+    val userMapper: UserMapper
+) {
     companion object {
         private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
@@ -94,6 +100,9 @@ class ProductService(val productRepository: ProductRepository, val userService: 
 
     // TODO valutare del refactoring per questa funzione (placeOrder)
     fun placeOrder(cart: List<CartProductDTO>, shippingAddress: String, authentication: Authentication): OrderDTO? {
+        if (cart.isEmpty())
+            return null
+
         // get user info
         val authenticationUser = authentication.principal as User
         val user = userService.getUserByEmail(authenticationUser.email)
@@ -119,20 +128,30 @@ class ProductService(val productRepository: ProductRepository, val userService: 
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
 
+        // TODO usare un mapper
         val orderPlacingDTO = OrderPlacingDTO(cart, userDTO, shippingAddress)
 
         val requestEntity = HttpEntity<OrderPlacingDTO>(orderPlacingDTO, headers)
-        val responseEntity: ResponseEntity<OrderDTO> = restTemplate.exchange(
-            "http://localhost:8082/orders",
-            HttpMethod.POST,
-            requestEntity,
-            OrderDTO::class.java
-        )
+        try {
+            // TODO avoid hardcoded address
+            val responseEntity: ResponseEntity<OrderDTO> = restTemplate.exchange(
+                "http://localhost:8082/orders",
+                HttpMethod.POST,
+                requestEntity,
+                OrderDTO::class.java
+            )
 
-        val statusCode = responseEntity.statusCode
-        if (statusCode == HttpStatus.OK) {
-            return responseEntity.body
+            val statusCode = responseEntity.statusCode
+            if (statusCode == HttpStatus.OK)
+                return responseEntity.body
+        } catch (e: HttpServerErrorException) {
+            LOGGER.debug("Cannot place order: ${e.message}")
+            return null
+        } catch (e: HttpClientErrorException) {
+            LOGGER.debug("Cannot place order: ${e.message}")
+            return null
         }
+
         return null
     }
 }
