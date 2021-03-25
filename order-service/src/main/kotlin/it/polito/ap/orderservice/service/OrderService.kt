@@ -13,22 +13,50 @@ import it.polito.ap.orderservice.repository.OrderRepository
 import it.polito.ap.orderservice.service.mapper.OrderMapper
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpMethod
-import org.springframework.http.ResponseEntity
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.web.client.RestTemplateBuilder
+import org.springframework.http.*
+import org.springframework.http.client.ClientHttpResponse
+import org.springframework.stereotype.Component
 import org.springframework.stereotype.Service
+import org.springframework.web.bind.annotation.ExceptionHandler
+import org.springframework.web.bind.annotation.ResponseBody
+import org.springframework.web.bind.annotation.ResponseStatus
+import org.springframework.web.client.HttpClientErrorException
+import org.springframework.web.client.ResponseErrorHandler
 import org.springframework.web.client.RestTemplate
 import org.springframework.web.client.exchange
 import java.util.*
 
+@Component
+class RestTemplateResponseErrorHandler : ResponseErrorHandler {
+
+    override fun hasError(response: ClientHttpResponse): Boolean {
+        println("has error")
+        return true
+    }
+
+    override fun handleError(response: ClientHttpResponse) {
+        println("handler error")
+    }
+
+}
+
 @Service
-class OrderService(val orderRepository: OrderRepository, val mapper: OrderMapper) {
+class OrderService(
+    val orderRepository: OrderRepository,
+    val mapper: OrderMapper,
+    private final val restTemplateResponseErrorHandler: RestTemplateResponseErrorHandler
+) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(OrderService::class.java)
     }
 
-    private val restTemplate = RestTemplate()
+    private final val restTemplateBuilder = RestTemplateBuilder()
+    val restTemplate: RestTemplate = restTemplateBuilder
+        .errorHandler(restTemplateResponseErrorHandler)
+        .build()
 
     // TODO: don't use hardcoded paths / endpoints
     private val walletServiceAddress = "http://localhost:8083/wallets"
@@ -42,16 +70,21 @@ class OrderService(val orderRepository: OrderRepository, val mapper: OrderMapper
         // TODO: generate issuerId
 
         val transactionDTO = TransactionDTO("michelematteini", cartPrice, TransactionMotivation.ORDER_PAYMENT)
+
+        val headers = HttpHeaders()
+        headers.contentType = MediaType.APPLICATION_JSON
+        val requestEntity = HttpEntity<TransactionDTO>(transactionDTO, headers)
+
+        println("QUACK")
+
         val outcome: ResponseEntity<String> = restTemplate.exchange(
             "$walletServiceAddress/${orderPlacingDTO.user.email}/transactions",
             HttpMethod.PUT,
-            HttpEntity<TransactionDTO>(transactionDTO),
+            requestEntity,
             String::class.java
         )
-        println(outcome)
 
-
-        // TODO set back to debug loglevel
+        println(outcome.body)
 
         return null
     }
