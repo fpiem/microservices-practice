@@ -104,8 +104,8 @@ class WarehouseService(
             SortOperation(Sort.by("name"))
         )
 
-        val output1: AggregationResults<Warehouse> = mongoTemplate.aggregate(aggregation, "porcodio", Warehouse::class.java)
-        println(output1.mappedResults)
+        val output1: AggregationResults<Warehouse> = mongoTemplate.aggregate(aggregation, "warehouse", Warehouse::class.java)
+
         println("Siamo qui")
 
         return "null"
