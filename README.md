@@ -5,6 +5,9 @@
 - **PROBLEMA** per prof Forno, e se muoio esattamente inviando?
 - Serve un ACK message dall'orderservice? Tipo "confirm messages received" da Kafka per cambiare lo stato nel DB di pickups?
 - Il vantaggio del db di pickup é che siamo in grado di tornare indietro se falliamo durante la selezione degli items dalla warehouse
+- Order updates in the database need to be **atomic**
+- Nelle warehouse check se le quantitá sono sotto l'allarme
+- TUTTI gli admin devono ricevere notifiche quando si aggiorna un ordine?
 
 ### DONE
 

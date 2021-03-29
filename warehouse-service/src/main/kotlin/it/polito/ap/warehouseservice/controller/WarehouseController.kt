@@ -88,12 +88,17 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
                 LOGGER.info(statusString)
                 return ResponseEntity.ok(statusString)
             }
-            "alarm threshold not set" -> {
+            "negative product quantity" -> {
+                val statusString = "Product quantity must be non-negative"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "invalid alarm threshold" -> {
                 val statusString = "Alarm threshold not set, could not create product ${warehouseProductDTO.productId}"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
-            "insufficient product quantity" -> {
+            "insufficient quantity" -> {
                 val statusString = "Insufficient quantity of product ${warehouseProductDTO.productId} in warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
@@ -123,7 +128,7 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
-            "negative alarm threshold" -> {
+            "invalid alarm threshold" -> {
                 val statusString = "Alarm threshold must be non-negative"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
