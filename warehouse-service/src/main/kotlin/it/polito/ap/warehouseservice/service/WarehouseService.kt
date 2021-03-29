@@ -4,6 +4,7 @@ import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.DeliveryDTO
 import it.polito.ap.common.dto.ProductDTO
 import it.polito.ap.common.dto.WarehouseProductDTO
+import it.polito.ap.warehouseservice.controller.WarehouseController
 import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.model.WarehouseTransaction
@@ -17,6 +18,9 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Isolation
+import org.springframework.transaction.annotation.Transactional
+
 
 @Service
 class WarehouseService(
@@ -86,9 +90,7 @@ class WarehouseService(
         }
     }
 
-    private fun updateWarehouseProductQuantity(
-        warehouse: Warehouse, warehouseProduct: WarehouseProduct, orderId: String?
-    ): String {
+    private fun updateWarehouseProductQuantity(warehouse: Warehouse, warehouseProduct: WarehouseProduct): String {
         LOGGER.debug(
             "Received request to update product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}"
         )
@@ -130,7 +132,7 @@ class WarehouseService(
         }
     }
 
-    private fun updateWarehouseProductAlarmThreshold(warehouse: Warehouse, warehouseProduct: WarehouseProduct): String {
+    fun updateWarehouseProductAlarmThreshold(warehouse: Warehouse, warehouseProduct: WarehouseProduct): String {
         LOGGER.debug("Received request to update alarm threshold for product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}")
         val product = warehouse.inventory.firstOrNull { it.productId == warehouseProduct.productId }
         if (product == null) {
@@ -192,7 +194,7 @@ class WarehouseService(
         // product not being present in the inventory
         val warehouse = getWarehouseByWarehouseId(warehouseId)
         warehouse?.let {
-            val outcome = updateWarehouseProductQuantity(warehouse, warehouseProduct, null)
+            val outcome = updateWarehouseProductQuantity(warehouse, warehouseProduct)
             if (outcome == "product not found") {
                 return when {
                     warehouseProduct.quantity < 0 -> "negative product quantity"
@@ -221,63 +223,65 @@ class WarehouseService(
         }
     }
 
-//    private fun createWarehouseDelivery(warehouse: Warehouse, orderItems: MutableMap<String, Int>): DeliveryDTO {
-//        LOGGER.debug("Creating DeliveryDTO for warehouse ${warehouse.warehouseId}")
-//        val deliveryProducts = mutableListOf<CartProductDTO>()
-//        val relevantInventory = warehouse.inventory.filter { it.productId in orderItems }
-//        for (warehouseProduct in relevantInventory) {
-//            val productId = warehouseProduct.productId
-//            val requestedQuantity = orderItems[productId]!!
-//            val warehouseQuantity = warehouseProduct.quantity
-//            if (warehouseQuantity > requestedQuantity) {
-//                orderItems[productId] = 0
-//                deliveryProducts.add(CartProductDTO(ProductDTO(productId), requestedQuantity))
-//                updateWarehouseProductQuantity(warehouse, WarehouseProduct(productId, -requestedQuantity))
-//            } else {
-//                orderItems[productId] = requestedQuantity - warehouseQuantity
-//                deliveryProducts.add(CartProductDTO(ProductDTO(productId), warehouseQuantity))
-//                updateWarehouseProductQuantity(warehouse, WarehouseProduct(productId, -warehouseQuantity))
-//            }
-//        }
-//        return DeliveryDTO(deliveryProducts, warehouse.warehouseId.toString())
-//    }
-
-    private fun productDelivery(
-        orderId: String, warehouseId: String, productId: String, quantity: Int
-    ): CartProductDTO {
-
-        val query = Query().addCriteria(
-            Criteria.where("warehouseId").`is`(warehouseId)
-                .and("inventory").elemMatch(
-                    Criteria.where("productId").`is`(productId)
-                )
-        )
-
-        // TODO: change to within update
-        val transaction = WarehouseTransaction(
-            orderId,
-            mutableMapOf((productId to quantity)),
-            WarehouseTransactionStatus.CONFIRMED
-        )
-        val update = Update()
-            .inc("inventory.$.quantity", quantity)
-            .push("transactionList", )
-
-        val updatedWarehouse = mongoTemplate.findAndModify(
-            query, update, FindAndModifyOptions().returnNew(true), Warehouse::class.java
-        )
-
-    }
-
-    private fun createWarehouseDelivery(warehouseId: String, orderItems: MutableMap<String, Int>): DeliveryDTO {
+    private fun createWarehouseDelivery(
+        warehouseId: String, orderId: String, orderItems: MutableMap<String, Int>
+    ): DeliveryDTO? {
         LOGGER.debug("Creating DeliveryDTO for warehouse $warehouseId")
-        val deliveryProducts = mutableListOf<CartProductDTO>()
-        orderItems.forEach { (productId, quantity) ->
 
+        // Read warehouse contents first, update optimistically and fail if this operation causes the quantity of any
+        // product to drop below zero.
+        val warehouse = getWarehouseByWarehouseId(warehouseId)!!
+
+        val deliveryProducts = mutableListOf<CartProductDTO>()
+        val relevantInventory = warehouse.inventory.filter { it.productId in orderItems }
+        for (warehouseProduct in relevantInventory) {
+            LOGGER.debug("Picking up product ${warehouseProduct.productId} from warehouse $warehouseId")
+
+            val productId = warehouseProduct.productId
+            val requestedQuantity = orderItems[productId]!!
+            val warehouseQuantity = warehouseProduct.quantity
+
+            var deliveryQuantity = requestedQuantity
+            if (warehouseQuantity < requestedQuantity) {
+                deliveryQuantity = warehouseQuantity
+            }
+
+            val query = Query().addCriteria(
+                Criteria.where("warehouseId").`is`(warehouseId)
+                    .and("inventory").elemMatch(
+                        Criteria.where("productId").`is`(productId)
+                            .and("quantity").gte(deliveryQuantity)
+                    )
+            )
+            val transaction = WarehouseTransaction(
+                orderId,
+                mutableMapOf((productId to deliveryQuantity)),
+                WarehouseTransactionStatus.CONFIRMED
+            )
+            val update = Update()
+                .inc("inventory.$.quantity", -deliveryQuantity)
+                .push("transactionList", transaction)
+
+            val updatedWarehouse = mongoTemplate.findAndModify(
+                query, update, FindAndModifyOptions().returnNew(true), Warehouse::class.java
+            )
+            updatedWarehouse?.let {
+                LOGGER.debug("Successfully picked up product $productId from warehouse $warehouseId")
+                orderItems[productId] = orderItems[productId]!!.minus(deliveryQuantity)
+                deliveryProducts.add(CartProductDTO(ProductDTO(productId), deliveryQuantity))
+            } ?: kotlin.run {
+                LOGGER.debug("Failed to pick up product $productId from warehouse $warehouseId")
+            }
         }
+        if (deliveryProducts.isEmpty()) {
+            LOGGER.debug("No products could be picked up from warehouse $warehouseId")
+            return null
+        }
+        return DeliveryDTO(deliveryProducts, warehouseId)
     }
 
-    fun createDeliveryList(cart: List<CartProductDTO>): List<DeliveryDTO>? {
+    fun createDeliveryList(orderId: String, cart: List<CartProductDTO>): List<DeliveryDTO>? {
+        LOGGER.debug("Received request to compute the delivery list for order $orderId")
         val deliveryList = mutableListOf<DeliveryDTO>()
         val orderItems = cart.associateBy({ it.productDTO.productId }, { it.quantity }).toMutableMap()
 
@@ -285,12 +289,17 @@ class WarehouseService(
             val mostRequestedProductId = orderItems.maxByOrNull { it.value }!!.key
             val selectedWarehouseId = selectWarehouse(mostRequestedProductId)
             if (selectedWarehouseId == null) {
+                // TODO: implement rollback
+                LOGGER.debug("Rolling back - Failed to create delivery list for order $orderId")
                 deliveryRollback(deliveryList)
                 return null
             }
-            deliveryList.add(createWarehouseDelivery(selectedWarehouseId, orderItems))
+            val warehouseDeliveryDTO = createWarehouseDelivery(selectedWarehouseId, orderId, orderItems)
+            warehouseDeliveryDTO?.let {
+                LOGGER.debug("Created delivery list for warehouse $selectedWarehouseId")
+                deliveryList.add(warehouseDeliveryDTO)
+            }
         }
-
         return deliveryList
     }
 

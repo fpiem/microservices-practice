@@ -18,18 +18,18 @@ class WarehouseServiceApplication(
         val warehouse1 = Warehouse(
             ObjectId("111111111111111111111111"), "warehouse1",
             mutableListOf(
-                WarehouseProduct("prod1", 0, 5),
+                WarehouseProduct("prod1", 10, 5),
                 WarehouseProduct("prod2", 10, 3),
-                WarehouseProduct("prod3", 3, 4)
+                WarehouseProduct("prod3", 10, 4)
             ),
             mutableListOf()
         )
         val warehouse2 = Warehouse(
             ObjectId("222222222222222222222222"), "warehouse2",
             mutableListOf(
-                WarehouseProduct("prod3", 3, 5),
-                WarehouseProduct("prod4", 7, 3),
-                WarehouseProduct("prod5", 3, 4)
+                WarehouseProduct("prod3", 10, 5),
+                WarehouseProduct("prod4", 10, 3),
+                WarehouseProduct("prod5", 10, 4)
             ),
             mutableListOf()
         )

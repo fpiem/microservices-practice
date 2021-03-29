@@ -152,10 +152,19 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
     }
 
     // TODO: info on orderId? Brutto, introduce coupling, ma non saprei come altro fare
-    @GetMapping("/deliveries")
-    fun deliveryList(@RequestBody cart: List<CartProductDTO>): ResponseEntity<List<DeliveryDTO>> {
-        LOGGER.info("Received request for delivery list for cart $cart")
-        return ResponseEntity.badRequest().body(null)
+    @PostMapping("/{orderId}/deliveries")
+    fun deliveryList(
+        @PathVariable orderId: String, @RequestBody cart: List<CartProductDTO>
+    ): ResponseEntity<List<DeliveryDTO>> {
+        LOGGER.info("Received request to compute the delivery list for order $orderId")
+        val deliveryList = warehouseService.createDeliveryList(orderId, cart)
+        deliveryList?.let {
+            LOGGER.info("Computed the delivery list for order $orderId")
+            return ResponseEntity.ok(deliveryList)
+        } ?: kotlin.run {
+            LOGGER.info("Could not compute the delivery list for order $orderId")
+            return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+        }
     }
 
 }
