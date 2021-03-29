@@ -12,6 +12,7 @@ import it.polito.ap.orderservice.repository.OrderRepository
 import it.polito.ap.orderservice.service.mapper.OrderMapper
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
 import org.springframework.http.*
 import org.springframework.stereotype.Service
@@ -35,9 +36,8 @@ class OrderService(
         private val LOGGER = LoggerFactory.getLogger(OrderService::class.java)
     }
 
-    // TODO: don't use hardcoded paths / endpoints
-    private val walletServiceAddress = "http://localhost:8083/wallets"
-    private val warehouseServiceAddress = "http://localhost:8084/warehouses"
+    @Value("\${application.wallet_address}") lateinit private var walletServiceAddress: String
+    @Value("\${application.warehouse_address}") lateinit private var warehouseServiceAddress: String
 
     // TODO: currently sync orchestration, check if ok
     fun createNewOrder(orderPlacingDTO: OrderPlacingDTO): OrderDTO? {
@@ -133,6 +133,7 @@ class OrderService(
         return orderRepository.findById(orderId.toString())
     }
 
+    // TODO fare modifica atomica
     fun modifyOrder(order: Order, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
         LOGGER.debug("Receiving request to modify status for order ${order.orderId}")
         val oldStatus = order.status // this because the fun 'changeStatus' changes the status of the var 'order'

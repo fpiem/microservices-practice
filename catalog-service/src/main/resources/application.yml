@@ -1,3 +1,6 @@
+application:
+  order_address: http://localhost:8082/orders
+
 spring:
   application:
     name: catalog-service

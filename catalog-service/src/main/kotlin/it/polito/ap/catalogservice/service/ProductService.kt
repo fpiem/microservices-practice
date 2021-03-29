@@ -8,6 +8,7 @@ import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.OrderDTO
 import it.polito.ap.common.dto.OrderPlacingDTO
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.security.core.Authentication
@@ -32,6 +33,8 @@ class ProductService(
     companion object {
         private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
+
+    @Value("\${application.order_address}") lateinit private var orderServiceAddress: String
 
     // check if product already exists, if not product is added
     fun addProduct(product: Product): String {
@@ -133,9 +136,8 @@ class ProductService(
 
         val requestEntity = HttpEntity<OrderPlacingDTO>(orderPlacingDTO, headers)
         try {
-            // TODO avoid hardcoded address
             val responseEntity: ResponseEntity<OrderDTO> = restTemplate.exchange(
-                "http://localhost:8082/orders",
+                "$orderServiceAddress",
                 HttpMethod.POST,
                 requestEntity,
                 OrderDTO::class.java
