@@ -1,3 +1,7 @@
+application:
+  warehouse_address: http://localhost:8084/warehouses
+  wallet_address: http://localhost:8083/wallets
+
 spring:
   application:
     name: order-service
