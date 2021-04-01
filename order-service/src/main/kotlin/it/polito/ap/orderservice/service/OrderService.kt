@@ -9,7 +9,6 @@ import it.polito.ap.common.utils.TransactionMotivation
 import it.polito.ap.orderservice.model.Delivery
 import it.polito.ap.orderservice.model.Order
 import it.polito.ap.orderservice.model.utils.CartElement
-import it.polito.ap.orderservice.repository.DeliveryRepository
 import it.polito.ap.orderservice.repository.OrderRepository
 import it.polito.ap.orderservice.service.mapper.OrderMapper
 import org.bson.types.ObjectId
@@ -37,7 +36,6 @@ inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object :
 @Service
 class OrderService(
     val orderRepository: OrderRepository,
-    val deliveryRepository: DeliveryRepository,
     val orderMapper: OrderMapper,
     val mongoTemplate: MongoTemplate,
     val kafkaTemplate: KafkaTemplate<String, String>,
@@ -147,16 +145,14 @@ class OrderService(
             )
             LOGGER.debug("Communication with warehouse service successful: ${responseEntityWarehouse.body}")
 
-            responseEntityWarehouse.body?.forEach { cartProductDTO ->
-                cartProductDTO.deliveryProducts.forEach {
+            responseEntityWarehouse.body?.forEach { deliveryDTO ->
+                deliveryDTO.deliveryProducts.forEach {
                     delivery.deliveryProducts[it.productDTO.productId] = it.quantity
                 }
                 deliveryList.add(delivery)
                 // fill delivery information
                 delivery.shippingAddress = orderPlacingDTO.shippingAddress
-                delivery.order = order
-                delivery.warehouse = cartProductDTO.warehouseId
-                deliveryRepository.save(delivery)
+                delivery.warehouseId = deliveryDTO.warehouseId
             }
         } catch (e: HttpServerErrorException) {
             LOGGER.debug("Cannot create Delivery List: ${e.message}")

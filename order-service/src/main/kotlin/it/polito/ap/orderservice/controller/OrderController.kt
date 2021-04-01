@@ -59,6 +59,8 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
         return orderService.modifyOrder(orderId, newStatus, user)
     }
 
+
+    // TODO: remove test code
     val mapper = jacksonObjectMapper()
 
     @GetMapping("/test")
