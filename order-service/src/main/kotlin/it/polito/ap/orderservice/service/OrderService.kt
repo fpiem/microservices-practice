@@ -1,5 +1,7 @@
 package it.polito.ap.orderservice.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.common.dto.*
 import it.polito.ap.common.utils.RoleType
 import it.polito.ap.common.utils.StatusType
@@ -20,6 +22,8 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.http.*
+import org.springframework.kafka.annotation.KafkaListener
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Service
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
@@ -35,22 +39,60 @@ class OrderService(
     val orderRepository: OrderRepository,
     val deliveryRepository: DeliveryRepository,
     val orderMapper: OrderMapper,
-    val mongoTemplate: MongoTemplate
+    val mongoTemplate: MongoTemplate,
+    val kafkaTemplate: KafkaTemplate<String, String>,
 ) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(OrderService::class.java)
     }
 
-    @Value("\${application.wallet_address}") lateinit private var walletServiceAddress: String
-    @Value("\${application.warehouse_address}") lateinit private var warehouseServiceAddress: String
+    @Value("\${application.wallet-address}")
+    private lateinit var walletServiceAddress: String
+    @Value("\${application.warehouse-address}")
+    private lateinit var warehouseServiceAddress: String
+    @Value("\${application.consistency-check-timeout-ms}")
+    private lateinit var consistencyCheckTimeoutMillis: Number
+    val jacksonObjectMapper = jacksonObjectMapper()
+
+    @KafkaListener(groupId = "order_service", topics = ["place_order"])
+    fun ensureOrderConsistency(message: String) {
+        val orderId = jacksonObjectMapper.readValue<ObjectId>(message)
+        LOGGER.debug("Ensuring consistency of order $orderId")
+        Thread.sleep(consistencyCheckTimeoutMillis.toLong())
+        val order = getOrderByOrderId(orderId)
+        if (order == null) {
+            LOGGER.debug("Order $orderId missing from the database, rolling back")
+            orderRollback(orderId)
+        } else {
+            LOGGER.debug("Found order $orderId in the database, order successful")
+        }
+    }
+
+    fun orderRollback(orderId: ObjectId) {
+        kafkaTemplate.send("rollback", jacksonObjectMapper.writeValueAsString(orderId))
+    }
+
+    fun getOrderByOrderId(orderId: ObjectId): Order? {
+        LOGGER.debug("Attempting to retrieve order $orderId from the database")
+        val order = orderRepository.getOrderByOrderId(orderId)
+        order?.let {
+            LOGGER.debug("Found order $orderId in the database")
+        } ?: kotlin.run {
+            LOGGER.debug("Could not find order $orderId in the database")
+        }
+        return order
+    }
 
     // TODO: currently sync orchestration, check if ok
     fun createNewOrder(orderPlacingDTO: OrderPlacingDTO): OrderDTO? {
         LOGGER.debug("Received a request to place an order for user ${orderPlacingDTO.user.email}")
+
         val cart = orderPlacingDTO.cart.map { orderMapper.toModel(it) }
         val cartPrice = cart.sumByDouble { it.price * it.quantity }
         val order = Order()
+
+        // ! HERE
 
         // get user info
         val user = orderPlacingDTO.user
@@ -141,6 +183,7 @@ class OrderService(
         return orderRepository.findById(orderId.toString())
     }
 
+    // TODO: send kafka message
     // TODO fare un check se è tutto giusto
     fun modifyOrder(orderId: ObjectId, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
         LOGGER.debug("Receiving request to modify status for order $orderId")
@@ -180,12 +223,6 @@ class OrderService(
             LOGGER.debug("Unauthorized request to modify order status")
             return ResponseEntity("Unauthorized request", HttpStatus.UNAUTHORIZED)
         }
-    }
-
-    private fun changeStatus(order: Order, newStatus: StatusType): Order {
-        order.status = newStatus
-        orderRepository.save(order)
-        return order
     }
 
 }

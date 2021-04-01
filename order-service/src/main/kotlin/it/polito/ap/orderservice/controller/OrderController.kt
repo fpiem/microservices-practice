@@ -1,5 +1,7 @@
 package it.polito.ap.orderservice.controller
 
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.polito.ap.common.dto.OrderDTO
 import it.polito.ap.common.dto.OrderPlacingDTO
 import it.polito.ap.common.dto.UserDTO
@@ -7,15 +9,16 @@ import it.polito.ap.common.utils.StatusType
 import it.polito.ap.orderservice.service.OrderService
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
+import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.web.bind.annotation.*
 
 
 @RestController
 @RequestMapping("/orders")
-class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTemplate<String, String>) {
+class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTemplate<String, String>
+) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(OrderController::class.java)
@@ -46,7 +49,6 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
         return ResponseEntity.badRequest().body("No order found with the requested Id")
     }
 
-
     @PatchMapping("/{orderId}")
     fun changeStatus(
         @PathVariable orderId: ObjectId,
@@ -57,9 +59,22 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
         return orderService.modifyOrder(orderId, newStatus, user)
     }
 
+    val mapper = jacksonObjectMapper()
+
     @GetMapping("/test")
     fun test() {
         kafkaTemplate.send("hello_topic", "ciao")
+    }
+
+    @KafkaListener(groupId = "test", topics = ["hello_topic"])
+    fun listenerTest(message: String) {
+        Thread.sleep(1000)
+        println("listener1 - $message")
+    }
+
+    @KafkaListener(groupId = "test3", topics = ["hello_topic"])
+    fun listenerTest2(message: String) {
+        println("listener2 - $message")
     }
 
 }

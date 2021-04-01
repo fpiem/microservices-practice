@@ -1,5 +1,7 @@
 ### TODO List
 
+[] fix snake case in application.yml files
+
 - In warehouseservice, database di pickups (solo per differenziare dalle delivery dell'orderservice)
 - chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)
 - **PROBLEMA** per prof Forno, e se muoio esattamente inviando?
