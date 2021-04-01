@@ -2,6 +2,8 @@ package it.polito.ap.walletservice.controller
 
 import it.polito.ap.common.dto.TransactionDTO
 import it.polito.ap.walletservice.model.Transaction
+import it.polito.ap.walletservice.model.Wallet
+import it.polito.ap.walletservice.repository.WalletRepository
 import it.polito.ap.walletservice.service.WalletService
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
@@ -10,7 +12,7 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/wallets")
-class WalletController(val walletService: WalletService) {
+class WalletController(val walletService: WalletService, val walletRepository: WalletRepository) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(WalletController::class.java)
@@ -57,6 +59,13 @@ class WalletController(val walletService: WalletService) {
             LOGGER.info(statusString)
             return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
         }
+    }
+
+    // TODO: remove walletRepository import and this test function
+    @PostMapping("/test")
+    fun test(@RequestBody transactionDTO: TransactionDTO): Wallet? {
+        walletService.addTransaction("333333333333333333333333", transactionDTO)
+        return walletRepository.getWalletByIssuerId(transactionDTO.issuerId)
     }
 
 }

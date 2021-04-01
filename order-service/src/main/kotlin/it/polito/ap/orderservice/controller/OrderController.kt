@@ -65,7 +65,7 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
 
     @GetMapping("/test")
     fun test() {
-        kafkaTemplate.send("hello_topic", "ciao")
+        kafkaTemplate.send("rollback", mapper.writeValueAsString("francesco"))
     }
 
     @KafkaListener(groupId = "test", topics = ["hello_topic"])

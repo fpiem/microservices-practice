@@ -51,6 +51,7 @@ class OrderService(
     private lateinit var warehouseServiceAddress: String
     @Value("\${application.consistency-check-timeout-ms}")
     private lateinit var consistencyCheckTimeoutMillis: Number
+
     val jacksonObjectMapper = jacksonObjectMapper()
 
     @KafkaListener(groupId = "order_service", topics = ["place_order"])

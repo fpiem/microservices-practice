@@ -11,4 +11,4 @@ logging:
     it.polito.ap.warehouseservice: DEBUG
 
 server:
-  port: 8084
+  port: 8184

@@ -1,6 +1,6 @@
 application:
-  warehouse-address: http://localhost:8084/warehouses
-  wallet-address: http://localhost:8083/wallets
+  warehouse-address: http://localhost:8184/warehouses
+  wallet-address: http://localhost:8183/wallets
   consistency-check-timeout-ms: 30000
 
 spring:
@@ -12,4 +12,4 @@ spring:
       auto-offset-reset: earliest
 
 server:
-  port: 8089
+  port: 8184

@@ -1,28 +1,57 @@
 package it.polito.ap.walletservice.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.common.dto.TransactionDTO
 import it.polito.ap.common.utils.TransactionMotivation
 import it.polito.ap.walletservice.model.Transaction
 import it.polito.ap.walletservice.model.Wallet
 import it.polito.ap.walletservice.repository.WalletRepository
 import it.polito.ap.walletservice.service.mapper.WalletMapper
+import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
+import org.springframework.kafka.annotation.KafkaListener
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Service
 
 @Service
 class WalletService(
     val walletRepository: WalletRepository,
     val mapper: WalletMapper,
-    val mongoTemplate: MongoTemplate
+    val mongoTemplate: MongoTemplate,
+    val kafkaTemplate: KafkaTemplate<String, String>
 ) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(WalletService::class.java)
+    }
+
+    val jacksonObjectMapper = jacksonObjectMapper()
+
+    @KafkaListener(groupId = "wallet_service", topics = ["rollback"])
+    fun rollbackListener(message: String) {
+        // TODO: figure out objectId/string
+        val orderId = jacksonObjectMapper.readValue<String>(message).toString()
+        LOGGER.debug("Ensuring consistency of order $orderId")
+        val wallet = walletRepository.getWalletByIssuerId(orderId)
+        wallet?.let {
+            LOGGER.debug("Transaction present in the database, rolling back")
+            val relevantTransaction = wallet.transactionList.filter { it.issuerId == orderId }[0]
+            val rollbackTransactionDTO = TransactionDTO(
+                orderId,
+                -relevantTransaction.amount,
+                TransactionMotivation.AUTOMATED_REFUND
+            )
+            val updatedFunds = addTransaction(wallet.userId.toString(), rollbackTransactionDTO)
+            LOGGER.debug("Rollback successful, updated funds: $updatedFunds")
+        } ?: kotlin.run {
+            LOGGER.debug("Transaction not present in the database, no rollback needed")
+        }
     }
 
     fun getWalletByUserId(userId: String): Wallet? {
@@ -34,26 +63,6 @@ class WalletService(
         } ?: kotlin.run {
             LOGGER.debug("Could not find wallet for user $userId")
             return null
-        }
-    }
-
-    // TODO: Kafka
-    fun rollbackTransaction(userId: String, orderId: String): String {
-        LOGGER.debug("Received request to rollback order $orderId for user $userId")
-        val wallet = getWalletByUserId(userId) ?: return "could not find wallet"
-        val relevantTransactions = wallet.transactionList.filter { it.issuerId == orderId }
-        return when {
-            relevantTransactions.isEmpty() -> { "order not found" }
-            relevantTransactions.size > 1 -> { "already refunded" }
-            else -> {
-                val rollbackTransactionDTO = TransactionDTO(
-                    orderId,
-                    -relevantTransactions[0].amount,
-                    TransactionMotivation.AUTOMATED_REFUND
-                )
-                val updatedFunds = addTransaction(userId, rollbackTransactionDTO)
-                "refund completed - $updatedFunds"
-            }
         }
     }
 

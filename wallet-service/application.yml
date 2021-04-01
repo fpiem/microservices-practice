@@ -3,4 +3,4 @@ spring:
     name: wallet-service
 
 server:
-  port: 8083
+  port: 8183

@@ -1,5 +1,5 @@
 application:
-  order_address: http://localhost:8082/orders
+  order_address: http://localhost:8182/orders
 
 spring:
   application:
@@ -10,4 +10,4 @@ spring:
       auto-offset-reset: earliest
 
 server:
-  port: 8081
+  port: 8181

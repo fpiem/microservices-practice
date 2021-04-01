@@ -3,4 +3,4 @@ spring:
     name: warehouse-service
 
 server:
-  port: 8084
+  port: 8184
