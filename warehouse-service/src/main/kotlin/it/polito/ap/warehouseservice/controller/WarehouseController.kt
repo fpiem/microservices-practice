@@ -151,7 +151,6 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
         }
     }
 
-    // TODO: info on orderId? Brutto, introduce coupling, ma non saprei come altro fare
     @PostMapping("/{orderId}/deliveries")
     fun deliveryList(
         @PathVariable orderId: String, @RequestBody cart: List<CartProductDTO>

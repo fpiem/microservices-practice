@@ -26,6 +26,9 @@ dependencies {
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.security:spring-security-test")
 
+    implementation("org.apache.kafka:kafka-streams")
+    implementation("org.springframework.kafka:spring-kafka")
+
     implementation(project(":common"))
 
     implementation ("org.mapstruct:mapstruct:1.4.2.Final")

@@ -1,6 +1,10 @@
 spring:
   application:
     name: wallet-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
 
 server:
   port: 8083

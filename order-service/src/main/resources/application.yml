@@ -5,6 +5,10 @@ application:
 spring:
   application:
     name: order-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
 
 server:
-  port: 8082
+  port: 8089

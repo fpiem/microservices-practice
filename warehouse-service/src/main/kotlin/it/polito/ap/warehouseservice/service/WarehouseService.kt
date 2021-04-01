@@ -289,6 +289,7 @@ class WarehouseService(
             val mostRequestedProductId = orderItems.maxByOrNull { it.value }!!.key
             val selectedWarehouseId = selectWarehouse(mostRequestedProductId)
             if (selectedWarehouseId == null) {
+                // TODO check what happens with 0 quantity
                 // TODO: implement rollback
                 LOGGER.debug("Rolling back - Failed to create delivery list for order $orderId")
                 deliveryRollback(deliveryList)

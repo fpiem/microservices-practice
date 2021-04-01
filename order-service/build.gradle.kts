@@ -24,6 +24,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 
+    implementation("org.apache.kafka:kafka-streams")
+    implementation("org.springframework.kafka:spring-kafka")
+
     implementation(project(":common"))
 
     implementation ("org.mapstruct:mapstruct:1.4.2.Final")

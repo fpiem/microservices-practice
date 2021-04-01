@@ -63,6 +63,8 @@ class OrderService(
         headers.contentType = MediaType.APPLICATION_JSON
         val requestEntityWallet = HttpEntity<TransactionDTO>(transactionDTO, headers)
 
+        // TODO: kafka - inizio processo per order with orderId
+
         try {
             val responseEntityWallet: HttpEntity<String> = restTemplate.exchange(
                 "$walletServiceAddress/${order.orderId}/transactions",
@@ -164,7 +166,7 @@ class OrderService(
         val query = Query().addCriteria(
             Criteria.where("orderId").`is`(orderId)
                 .and("buyer").`is`(user.email)
-                .and("status").`is`(StatusType.PAID)
+                .and("status").`is`(StatusType.ISSUED)
         )
         val update = Update().set("status", StatusType.CANCELLED)
         val updateStatus = mongoTemplate.findAndModify(

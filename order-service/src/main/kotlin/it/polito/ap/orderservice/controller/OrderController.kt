@@ -7,12 +7,15 @@ import it.polito.ap.common.utils.StatusType
 import it.polito.ap.orderservice.service.OrderService
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.ResponseEntity
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.web.bind.annotation.*
+
 
 @RestController
 @RequestMapping("/orders")
-class OrderController(val orderService: OrderService) {
+class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTemplate<String, String>) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(OrderController::class.java)
@@ -55,8 +58,8 @@ class OrderController(val orderService: OrderService) {
     }
 
     @GetMapping("/test")
-    fun test(): String {
-        return "ciao\n"
+    fun test() {
+        kafkaTemplate.send("hello_topic", "ciao")
     }
 
 }

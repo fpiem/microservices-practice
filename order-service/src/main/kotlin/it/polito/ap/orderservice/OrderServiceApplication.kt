@@ -16,7 +16,7 @@ fun main(args: Array<String>) {
     var context = runApplication<OrderServiceApplication>(*args)
 
     var orderRepository = context.getBean<OrderRepository>("orderRepository")
-    var order = Order(mutableListOf<CartElement>(), "user.email", mutableListOf<Delivery>(), StatusType.PAID)
+    var order = Order(mutableListOf<CartElement>(), "user.email", mutableListOf<Delivery>(), StatusType.ISSUED)
 
     print(order.orderId)
     orderRepository.save(order)
