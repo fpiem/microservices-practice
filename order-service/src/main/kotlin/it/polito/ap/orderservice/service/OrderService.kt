@@ -14,6 +14,11 @@ import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.core.ParameterizedTypeReference
+import org.springframework.data.mongodb.core.FindAndModifyOptions
+import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.query.Criteria
+import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.core.query.Update
 import org.springframework.http.*
 import org.springframework.stereotype.Service
 import org.springframework.web.client.HttpClientErrorException
@@ -29,7 +34,8 @@ inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object :
 class OrderService(
     val orderRepository: OrderRepository,
     val deliveryRepository: DeliveryRepository,
-    val orderMapper: OrderMapper
+    val orderMapper: OrderMapper,
+    val mongoTemplate: MongoTemplate
 ) {
 
     companion object {
@@ -133,28 +139,45 @@ class OrderService(
         return orderRepository.findById(orderId.toString())
     }
 
-    // TODO fare modifica atomica
-    fun modifyOrder(order: Order, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
-        LOGGER.debug("Receiving request to modify status for order ${order.orderId}")
-        val oldStatus = order.status // this because the fun 'changeStatus' changes the status of the var 'order'
+    // TODO fare un check se è tutto giusto
+    fun modifyOrder(orderId: ObjectId, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
+        LOGGER.debug("Receiving request to modify status for order $orderId")
         // admin logic
         if (RoleType.ROLE_ADMIN == user.role) {
-            val modifiedOrder = changeStatus(order, newStatus)
-            LOGGER.debug("Order modified by admin! Order status: ${modifiedOrder.status}")
-            if (order.buyer == user.email) // to mantein the logic of: an admin can be a customer
-                if (StatusType.PAID == oldStatus) // so the message is different if the admin do something that can be done by a customer
-                    return ResponseEntity.ok("Order modified! Order status: ${modifiedOrder.status}")
-            return ResponseEntity.ok("Order modified by admin! Order status: ${modifiedOrder.status}")
+            val query = Query().addCriteria(
+                Criteria.where("orderId").`is`(orderId)
+            )
+            val update = Update().set("status", newStatus)
+            val updateStatus = mongoTemplate.findAndModify(
+                query, update, FindAndModifyOptions().returnNew(true), Order::class.java
+            )
+
+            updateStatus?.let {
+                LOGGER.debug("Order modified by admin! Order status: ${updateStatus.status}")
+                return ResponseEntity.ok("Order modified by admin! Order status: ${updateStatus.status}")
+            } ?: kotlin.run {
+                LOGGER.debug("Cannot change order status")
+                return ResponseEntity("Cannot change order status", HttpStatus.BAD_REQUEST)
+            }
         }
         // customer logic
-        if (order.buyer == user.email)
-            if (StatusType.PAID == oldStatus) {
-                val modifiedOrder = changeStatus(order, StatusType.CANCELLED)
-                LOGGER.debug("Order modified! Order status: ${modifiedOrder.status}")
-                return ResponseEntity.ok("Order modified! Order status: ${modifiedOrder.status}")
-            }
-        LOGGER.debug("Unauthorized request to modify order status")
-        return ResponseEntity("Unauthorized request", HttpStatus.UNAUTHORIZED)
+        val query = Query().addCriteria(
+            Criteria.where("orderId").`is`(orderId)
+                .and("buyer").`is`(user.email)
+                .and("status").`is`(StatusType.PAID)
+        )
+        val update = Update().set("status", StatusType.CANCELLED)
+        val updateStatus = mongoTemplate.findAndModify(
+            query, update, FindAndModifyOptions().returnNew(true), Order::class.java
+        )
+
+        updateStatus?.let {
+            LOGGER.debug("Order modified! Order status: ${updateStatus.status}")
+            return ResponseEntity.ok("Order modified! Order status: ${updateStatus.status}")
+        } ?: kotlin.run {
+            LOGGER.debug("Unauthorized request to modify order status")
+            return ResponseEntity("Unauthorized request", HttpStatus.UNAUTHORIZED)
+        }
     }
 
     private fun changeStatus(order: Order, newStatus: StatusType): Order {

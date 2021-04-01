@@ -51,11 +51,7 @@ class OrderController(val orderService: OrderService) {
         @RequestBody user: UserDTO
     ): ResponseEntity<String> {
         LOGGER.info("Received request to change the status of $orderId to $newStatus from ${user.email} with role: ${user.role}!")
-        val order = orderService.getOrderById(orderId)
-        if (order.isPresent)
-            return orderService.modifyOrder(order.get(), newStatus, user)
-        LOGGER.info("No order found with id $orderId")
-        return ResponseEntity.badRequest().body("No order found with the requested Id")
+        return orderService.modifyOrder(orderId, newStatus, user)
     }
 
     @GetMapping("/test")

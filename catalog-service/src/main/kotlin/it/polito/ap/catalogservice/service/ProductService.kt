@@ -137,7 +137,7 @@ class ProductService(
         val requestEntity = HttpEntity<OrderPlacingDTO>(orderPlacingDTO, headers)
         try {
             val responseEntity: ResponseEntity<OrderDTO> = restTemplate.exchange(
-                "$orderServiceAddress",
+                orderServiceAddress,
                 HttpMethod.POST,
                 requestEntity,
                 OrderDTO::class.java
