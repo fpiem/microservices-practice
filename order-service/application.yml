@@ -3,4 +3,4 @@ spring:
     name: order-service
 
 server:
-  port: 8184
+  port: 8182

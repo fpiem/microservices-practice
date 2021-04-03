@@ -35,8 +35,7 @@ class WalletService(
 
     @KafkaListener(groupId = "wallet_service", topics = ["rollback"])
     fun rollbackListener(message: String) {
-        // TODO: figure out objectId/string
-        val orderId = jacksonObjectMapper.readValue<String>(message).toString()
+        val orderId = jacksonObjectMapper.readValue<String>(message)
         LOGGER.debug("Ensuring consistency of order $orderId")
         val wallet = walletRepository.getWalletByIssuerId(orderId)
         wallet?.let {

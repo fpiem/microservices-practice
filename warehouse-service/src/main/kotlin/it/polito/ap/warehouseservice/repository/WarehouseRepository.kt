@@ -3,12 +3,16 @@ package it.polito.ap.warehouseservice.repository
 import it.polito.ap.warehouseservice.model.Warehouse
 import org.springframework.data.mongodb.repository.Aggregation
 import org.springframework.data.mongodb.repository.MongoRepository
+import org.springframework.data.mongodb.repository.Query
 import org.springframework.stereotype.Repository
 
 @Repository
 interface WarehouseRepository : MongoRepository<Warehouse, String> {
 
     fun getWarehouseByWarehouseId(warehouseId: String): Warehouse?
+
+    @Query("{'transactionList.orderId': ?0}")
+    fun getWarehouseByOrderId(orderId: String): List<Warehouse>
 
     @Aggregation(
         "{'\$unwind' : '\$inventory'}",

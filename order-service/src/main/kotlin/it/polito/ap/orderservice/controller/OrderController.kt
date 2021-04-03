@@ -63,9 +63,10 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
     // TODO: remove test code
     val mapper = jacksonObjectMapper()
 
-    @GetMapping("/test")
-    fun test() {
-        kafkaTemplate.send("rollback", mapper.writeValueAsString("francesco"))
+    @GetMapping("/test/{orderId}")
+    fun test(@PathVariable orderId: ObjectId) {
+//        kafkaTemplate.send("rollback", mapper.writeValueAsString("francesco"))
+        orderService.orderRollback(orderId)
     }
 
     @KafkaListener(groupId = "test", topics = ["hello_topic"])

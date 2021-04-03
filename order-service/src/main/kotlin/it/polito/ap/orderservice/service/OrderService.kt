@@ -69,7 +69,7 @@ class OrderService(
     }
 
     fun orderRollback(orderId: ObjectId) {
-        kafkaTemplate.send("rollback", jacksonObjectMapper.writeValueAsString(orderId))
+        kafkaTemplate.send("rollback", jacksonObjectMapper.writeValueAsString(orderId.toString()))
     }
 
     fun getOrderByOrderId(orderId: ObjectId): Order? {

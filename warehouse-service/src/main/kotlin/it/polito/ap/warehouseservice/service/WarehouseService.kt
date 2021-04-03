@@ -1,5 +1,7 @@
 package it.polito.ap.warehouseservice.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.DeliveryDTO
 import it.polito.ap.common.dto.ProductDTO
@@ -17,6 +19,7 @@ import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
+import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
@@ -31,6 +34,51 @@ class WarehouseService(
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(WarehouseService::class.java)
+    }
+
+    val jacksonObjectMapper = jacksonObjectMapper()
+
+    @KafkaListener(groupId = "warehouse_service", topics = ["rollback"])
+    fun rollbackListener(message: String) {
+        val orderId = jacksonObjectMapper.readValue<String>(message)
+        LOGGER.debug("Ensuring consistency of order $orderId")
+        rollbackOrder(orderId)
+    }
+
+    fun rollbackOrder(orderId: String) {
+        val warehouses = warehouseRepository.getWarehouseByOrderId(orderId)
+        warehouses.forEach { rollbackWarehouse(it, orderId) }
+    }
+
+    fun rollbackWarehouse(warehouse: Warehouse, orderId: String) {
+        LOGGER.debug("Rolling back transactions for order $orderId in warehouse ${warehouse.warehouseId}")
+        val relevantTransactions = warehouse.transactionList.filter { it.orderId == orderId }
+        relevantTransactions.forEach { transaction ->
+            LOGGER.debug("Rolling back transaction for product ${transaction.productId} in order $orderId in warehouse ${warehouse.warehouseId}")
+            val query = Query().addCriteria(
+                Criteria.where("warehouseId").`is`(warehouse.warehouseId)
+                    .and("inventory").elemMatch(
+                        Criteria.where("productId").`is`(transaction.productId)
+                    )
+                )
+            val rollbackTransaction = WarehouseTransaction(
+                transaction.orderId,
+                transaction.productId,
+                -transaction.quantity,
+                WarehouseTransactionStatus.ROLLBACK
+            )
+            val update = Update()
+                .inc("inventory.$.quantity", -transaction.quantity)
+                .push("transactionList", rollbackTransaction)
+            val updatedWarehouse = mongoTemplate.findAndModify(
+                query, update, FindAndModifyOptions().returnNew(true), Warehouse::class.java
+            )
+            updatedWarehouse?.let {
+                LOGGER.debug("Rollback successful - product ${transaction.productId}, order $orderId")
+            } ?: kotlin.run {
+                LOGGER.error("Rollback failed - product ${transaction.productId}, order $orderId")
+            }
+        }
     }
 
     // TODO: add cache
@@ -57,9 +105,9 @@ class WarehouseService(
         }
     }
 
-    // Delivery list will contain only the committed warehouse modifications
-    // TODO: implement
-    private fun deliveryRollback(deliveryList: MutableList<DeliveryDTO>) {
+//    // Delivery list will contain only the committed warehouse modifications
+//    // TODO: implement
+//    private fun deliveryRollback(deliveryList: MutableList<DeliveryDTO>) {
 //        deliveryList.forEach {
 //            val warehouse = getWarehouseByWarehouseId(it.warehouseId)
 //            it.deliveryProducts.forEach { cartProductDTO ->
@@ -70,7 +118,7 @@ class WarehouseService(
 //                )
 //            }
 //        }
-    }
+//    }
 
     private fun persistWarehouse(warehouse: Warehouse) {
         LOGGER.debug("Updating warehouse ${warehouse.warehouseId}")
@@ -109,7 +157,8 @@ class WarehouseService(
         )
         val transaction = WarehouseTransaction(
             null,
-            mutableMapOf((warehouseProduct.productId to warehouseProduct.quantity)),
+            warehouseProduct.productId,
+            warehouseProduct.quantity,
             WarehouseTransactionStatus.ADMIN_MODIFICATION
         )
         val update = Update()
@@ -169,7 +218,8 @@ class WarehouseService(
 
         val transaction = WarehouseTransaction(
             null,
-            mutableMapOf((warehouseProduct.productId to warehouseProduct.quantity)),
+            warehouseProduct.productId,
+            warehouseProduct.quantity,
             WarehouseTransactionStatus.ADMIN_MODIFICATION
         )
         val update = Update().push("inventory", warehouseProduct).push("transactionList", transaction)
@@ -187,6 +237,7 @@ class WarehouseService(
         }
     }
 
+    // TODO: check if using a negative quantity transaction is indeed negative in quantity in the DB
     fun editProduct(warehouseId: String, warehouseProductDTO: WarehouseProductDTO): String {
         LOGGER.debug("Received request to edit product ${warehouseProductDTO.productId} alarm in $warehouseId")
         val warehouseProduct = mapper.toModel(warehouseProductDTO)
@@ -254,9 +305,7 @@ class WarehouseService(
                     )
             )
             val transaction = WarehouseTransaction(
-                orderId,
-                mutableMapOf((productId to deliveryQuantity)),
-                WarehouseTransactionStatus.CONFIRMED
+                orderId, productId, -deliveryQuantity, WarehouseTransactionStatus.CONFIRMED
             )
             val update = Update()
                 .inc("inventory.$.quantity", -deliveryQuantity)
@@ -292,7 +341,9 @@ class WarehouseService(
                 // TODO check what happens with 0 quantity
                 // TODO: implement rollback
                 LOGGER.debug("Rolling back - Failed to create delivery list for order $orderId")
-                deliveryRollback(deliveryList)
+                // Note: in case of physical failure, a Kafka rollback message will be sent by the order message
+                // => Even in this case no transaction information is lost
+                rollbackOrder(orderId)
                 return null
             }
             val warehouseDeliveryDTO = createWarehouseDelivery(selectedWarehouseId, orderId, orderItems)
