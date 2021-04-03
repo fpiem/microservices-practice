@@ -97,7 +97,7 @@ class OrderService(
         val user = orderPlacingDTO.user
 
         // send info to wallet-service
-        val transactionDTO = TransactionDTO(user.email, cartPrice, TransactionMotivation.ORDER_PAYMENT)
+        val transactionDTO = TransactionDTO(order.orderId.toString(), -cartPrice, TransactionMotivation.ORDER_PAYMENT)
 
         val restTemplate = RestTemplate()
         val headers = HttpHeaders()
@@ -108,7 +108,7 @@ class OrderService(
 
         try {
             val responseEntityWallet: HttpEntity<String> = restTemplate.exchange(
-                "$walletServiceAddress/${order.orderId}/transactions",
+                "$walletServiceAddress/${user.email}/transactions",
                 HttpMethod.PUT,
                 requestEntityWallet,
                 String::class.java

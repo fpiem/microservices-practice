@@ -9,5 +9,9 @@ spring:
     consumer:
       auto-offset-reset: earliest
 
+logging:
+  level:
+    it.polito.ap.catalogservice: DEBUG
+
 server:
   port: 8181

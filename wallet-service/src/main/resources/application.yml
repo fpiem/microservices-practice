@@ -6,5 +6,9 @@ spring:
     consumer:
       auto-offset-reset: earliest
 
+logging:
+  level:
+    it.polito.ap.walletservice: DEBUG
+
 server:
   port: 8183

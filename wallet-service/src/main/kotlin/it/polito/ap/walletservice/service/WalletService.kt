@@ -81,6 +81,7 @@ class WalletService(
         return wallet?.transactionList?.map { mapper.toDTO(it) }
     }
 
+    // TODO: if transaction.amount is positive, currently we just add money, is it correct?
     fun addTransaction(userId: String, transactionDTO: TransactionDTO): Double? {
         LOGGER.debug("Received request to add a transaction to the wallet of user $userId")
         val transaction = mapper.toModel(transactionDTO)

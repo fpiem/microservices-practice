@@ -1,6 +1,5 @@
 package it.polito.ap.orderservice.controller
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import it.polito.ap.common.dto.OrderDTO
 import it.polito.ap.common.dto.OrderPlacingDTO
@@ -58,7 +57,6 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
         LOGGER.info("Received request to change the status of $orderId to $newStatus from ${user.email} with role: ${user.role}!")
         return orderService.modifyOrder(orderId, newStatus, user)
     }
-
 
     // TODO: remove test code
     val mapper = jacksonObjectMapper()

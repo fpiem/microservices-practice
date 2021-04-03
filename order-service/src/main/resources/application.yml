@@ -11,5 +11,9 @@ spring:
     consumer:
       auto-offset-reset: earliest
 
+logging:
+  level:
+    it.polito.ap.orderservice: DEBUG
+
 server:
   port: 8182
