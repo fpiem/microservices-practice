@@ -105,27 +105,6 @@ class WarehouseService(
         }
     }
 
-//    // Delivery list will contain only the committed warehouse modifications
-//    // TODO: implement
-//    private fun deliveryRollback(deliveryList: MutableList<DeliveryDTO>) {
-//        deliveryList.forEach {
-//            val warehouse = getWarehouseByWarehouseId(it.warehouseId)
-//            it.deliveryProducts.forEach { cartProductDTO ->
-//                updateWarehouseProductQuantity(
-//                    warehouse!!,
-//                    WarehouseProduct(cartProductDTO.productDTO.productId, cartProductDTO.quantity),
-//
-//                )
-//            }
-//        }
-//    }
-
-    private fun persistWarehouse(warehouse: Warehouse) {
-        LOGGER.debug("Updating warehouse ${warehouse.warehouseId}")
-        warehouseRepository.save(warehouse)
-        LOGGER.debug("Updated warehouse ${warehouse.warehouseId}")
-    }
-
     fun warehouseInventory(warehouseId: String): List<WarehouseProductDTO>? {
         LOGGER.debug("Received request for the inventory of warehouse $warehouseId")
         val warehouse = getWarehouseByWarehouseId(warehouseId)
