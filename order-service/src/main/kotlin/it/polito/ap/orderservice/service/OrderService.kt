@@ -130,7 +130,7 @@ class OrderService(
                     ProductDTO(it.productId, it.price),
                     it.quantity
                 )
-            ) // orderMapper.toCartProductDTO(it)
+            )
         }
 
         val deliveryList: ArrayList<Delivery> = ArrayList()
@@ -139,7 +139,7 @@ class OrderService(
         val requestEntityWarehouse = HttpEntity<List<CartProductDTO>>(cartProductDTOList, headers)
         try {
             val responseEntityWarehouse: ResponseEntity<List<DeliveryDTO>> = restTemplate.exchange(
-                "$warehouseServiceAddress/deliveries?orderId=${order.orderId}",
+                "$warehouseServiceAddress/${order.orderId}/deliveries",
                 HttpMethod.POST,
                 requestEntityWarehouse,
                 typeRef<List<DeliveryDTO>>() // we need it to return a List
