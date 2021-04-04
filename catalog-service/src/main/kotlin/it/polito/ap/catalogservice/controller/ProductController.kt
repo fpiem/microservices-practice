@@ -15,7 +15,7 @@ import org.springframework.web.client.RestTemplate
 @RequestMapping("/products")
 class ProductController(val productService: ProductService) {
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(ProductService::class.java)
     }
 
     @GetMapping("")
@@ -67,7 +67,6 @@ class ProductController(val productService: ProductService) {
         return ResponseEntity.ok("Deletion of product with id $productId completed")
     }
 
-    // TODO capire se si possono passare più parametri come request body
     @PostMapping("/placeOrder")
     fun placeOrder(
         @RequestBody cart: List<CartProductDTO>,
@@ -87,7 +86,7 @@ class ProductController(val productService: ProductService) {
 
     @GetMapping("/test")
     fun test(): ResponseEntity<String> {
-        LOGGER.info("test comunication")
+        LOGGER.info("test communication")
         val restTemplate = RestTemplate()
         val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
         return ResponseEntity.ok(res.toString())

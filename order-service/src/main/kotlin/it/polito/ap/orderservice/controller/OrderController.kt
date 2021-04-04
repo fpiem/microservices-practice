@@ -24,7 +24,7 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
     }
 
     @PostMapping("")
-    fun placeOrder(@RequestBody orderPlacingDTO: OrderPlacingDTO): ResponseEntity<OrderDTO?> {
+    suspend fun placeOrder(@RequestBody orderPlacingDTO: OrderPlacingDTO): ResponseEntity<OrderDTO?> {
         LOGGER.info("Received a request to place an order for user ${orderPlacingDTO.user.email}")
         val order = orderService.createNewOrder(orderPlacingDTO)
         order?.let {
@@ -64,7 +64,7 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
     @GetMapping("/test/{orderId}")
     fun test(@PathVariable orderId: ObjectId) {
 //        kafkaTemplate.send("rollback", mapper.writeValueAsString("francesco"))
-        orderService.orderRollback(orderId)
+        orderService.orderRollback(orderId.toString())
     }
 
     @KafkaListener(groupId = "test", topics = ["hello_topic"])

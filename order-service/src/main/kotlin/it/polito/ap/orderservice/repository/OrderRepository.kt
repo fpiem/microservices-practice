@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository
 
 @Repository
 interface OrderRepository : MongoRepository<Order, String> {
-    fun getOrderByOrderId(orderId: ObjectId): Order?
+    fun getOrderByOrderId(orderId: String): Order?
 }

@@ -11,6 +11,7 @@ import it.polito.ap.orderservice.model.Order
 import it.polito.ap.orderservice.model.utils.CartElement
 import it.polito.ap.orderservice.repository.OrderRepository
 import it.polito.ap.orderservice.service.mapper.OrderMapper
+import kotlinx.coroutines.delay
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -55,10 +56,10 @@ class OrderService(
     val jacksonObjectMapper = jacksonObjectMapper()
 
     @KafkaListener(groupId = "order_service", topics = ["place_order"])
-    fun ensureOrderConsistency(message: String) {
-        val orderId = jacksonObjectMapper.readValue<ObjectId>(message)
+    suspend fun ensureOrderConsistency(message: String) {
+        val orderId = jacksonObjectMapper.readValue<String>(message)
         LOGGER.debug("Ensuring consistency of order $orderId")
-        Thread.sleep(consistencyCheckTimeoutMillis.toLong())
+        delay(consistencyCheckTimeoutMillis.toLong())
         val order = getOrderByOrderId(orderId)
         if (order == null) {
             LOGGER.debug("Order $orderId missing from the database, rolling back")
@@ -68,11 +69,11 @@ class OrderService(
         }
     }
 
-    fun orderRollback(orderId: ObjectId) {
-        kafkaTemplate.send("rollback", jacksonObjectMapper.writeValueAsString(orderId.toString()))
+    fun orderRollback(orderId: String) {
+        kafkaTemplate.send("rollback", jacksonObjectMapper.writeValueAsString(orderId))
     }
 
-    fun getOrderByOrderId(orderId: ObjectId): Order? {
+    fun getOrderByOrderId(orderId: String): Order? {
         LOGGER.debug("Attempting to retrieve order $orderId from the database")
         val order = orderRepository.getOrderByOrderId(orderId)
         order?.let {
@@ -83,7 +84,7 @@ class OrderService(
         return order
     }
 
-    // TODO: currently sync orchestration, check if ok
+    // TODO: should this function be "suspend"?
     fun createNewOrder(orderPlacingDTO: OrderPlacingDTO): OrderDTO? {
         LOGGER.debug("Received a request to place an order for user ${orderPlacingDTO.user.email}")
 
@@ -91,9 +92,8 @@ class OrderService(
         val cartPrice = cart.sumByDouble { it.price * it.quantity }
         val order = Order()
 
-        // ! HERE
+        kafkaTemplate.send("place_order", jacksonObjectMapper.writeValueAsString(order.orderId.toString()))
 
-        // get user info
         val user = orderPlacingDTO.user
 
         // send info to wallet-service
