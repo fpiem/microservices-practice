@@ -56,10 +56,11 @@ class OrderService(
     val jacksonObjectMapper = jacksonObjectMapper()
 
     @KafkaListener(groupId = "order_service", topics = ["place_order"])
-    suspend fun ensureOrderConsistency(message: String) {
+    // TODO: figure out if it is possible to use suspend + delay here instead of Thread.sleep()
+    fun ensureOrderConsistency(message: String) {
         val orderId = jacksonObjectMapper.readValue<String>(message)
         LOGGER.debug("Ensuring consistency of order $orderId")
-        delay(consistencyCheckTimeoutMillis.toLong())
+        Thread.sleep(consistencyCheckTimeoutMillis.toLong())
         val order = getOrderByOrderId(orderId)
         if (order == null) {
             LOGGER.debug("Order $orderId missing from the database, rolling back")

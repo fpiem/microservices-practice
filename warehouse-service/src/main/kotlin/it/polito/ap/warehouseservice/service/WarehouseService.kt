@@ -54,25 +54,27 @@ class WarehouseService(
         warehouses.forEach { rollbackWarehouse(it, orderId) }
     }
 
-//    fun sendAlarmEmail(admins: List<String>, product: WarehouseProduct) {
-//        val message = SimpleMailMessage()
-//        message.setSubject("${product.productId} - warehouse alarm")
-//        message.setText(
-//            """
-//            Quantity of ${product.productId} is below the alarm threshold of ${product.alarmThreshold}.
-//            Remaining quantity: ${product.quantity}.
-//            """.trimIndent()
-//        )
-//        message.setTo(*admins.toTypedArray())
-//    }
-//
-//    fun checkAlarmThreshold(warehouse: Warehouse, productId: String) {
-//        // If this function is reached, warehouse and the product within it are assured to exist
-//        val product = warehouse.inventory.firstOrNull { it.productId == productId }!!
-//        if (product.quantity < product.alarmThreshold) {
-//            sendAlarmEmail()
-//        }
-//    }
+    fun sendAlarmEmail(admins: List<String>, product: WarehouseProduct) {
+        val message = SimpleMailMessage()
+        message.setSubject("${product.productId} - warehouse alarm")
+        message.setText(
+            """
+            Quantity of ${product.productId} is below the alarm threshold of ${product.alarmThreshold}.
+            Remaining quantity: ${product.quantity}.
+            """.trimIndent()
+        )
+        message.setTo(*admins.toTypedArray())
+        mailSender.send(message)
+    }
+
+    fun checkAlarmThreshold(warehouse: Warehouse, productId: String) {
+        // If this function is reached, warehouse and the product within it are assured to exist
+        val product = warehouse.inventory.firstOrNull { it.productId == productId }!!
+        if (product.quantity < product.alarmThreshold) {
+            LOGGER.debug("Quantity of product $productId below the alarm threshold - Notifying admins")
+            sendAlarmEmail(warehouse.adminEmails, product)
+        }
+    }
 
     fun rollbackWarehouse(warehouse: Warehouse, orderId: String) {
         LOGGER.debug("Rolling back transactions for order $orderId in warehouse ${warehouse.warehouseId}")
@@ -175,6 +177,7 @@ class WarehouseService(
             LOGGER.debug(
                 "Updated quantity of product ${warehouseProduct.productId} in warehouse ${warehouse.warehouseId}"
             )
+            checkAlarmThreshold(updatedWarehouse, warehouseProduct.productId)
             return "product updated"
         } ?: kotlin.run {
             LOGGER.debug(
@@ -233,6 +236,7 @@ class WarehouseService(
 
         updatedWarehouse?.let {
             LOGGER.debug("Added product ${warehouseProduct.productId} to warehouse $warehouseId")
+            checkAlarmThreshold(updatedWarehouse, warehouseProduct.productId)
             return "product added"
         } ?: kotlin.run {
             LOGGER.debug("Could not add product ${warehouseProduct.productId} to warehouse $warehouseId")
@@ -321,6 +325,7 @@ class WarehouseService(
                 LOGGER.debug("Successfully picked up product $productId from warehouse $warehouseId")
                 orderItems[productId] = orderItems[productId]!!.minus(deliveryQuantity)
                 deliveryProducts.add(CartProductDTO(ProductDTO(productId), deliveryQuantity))
+                checkAlarmThreshold(updatedWarehouse, productId)
             } ?: kotlin.run {
                 LOGGER.debug("Failed to pick up product $productId from warehouse $warehouseId")
             }
