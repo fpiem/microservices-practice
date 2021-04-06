@@ -1,6 +1,6 @@
 ### TODO List
 
-- [] fix snake case in application.yml files
+- [X] fix snake case in application.yml files
 - [] remove pairs of application.yml
 - [] usedId should be an ObjectId, separate from email
 - [X] users should be able to cancel their own order

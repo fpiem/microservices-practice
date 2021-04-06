@@ -1,5 +1,5 @@
 application:
-  order_address: http://localhost:8182/orders
+  order-address: http://localhost:8182/orders
 
 spring:
   application:

@@ -39,7 +39,7 @@ class ProductService(
     private val restTemplate = RestTemplate()
     private val headers = HttpHeaders()
 
-    @Value("\${application.order_address}")
+    @Value("\${application.order-address}")
     private lateinit var orderServiceAddress: String
 
     // check if product already exists, if not product is added
