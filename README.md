@@ -4,14 +4,14 @@
 - [] how to deploy the whole thing? docker-compose?
 - [X] userId should be an ObjectId, separate from email
 - [X] users should be able to cancel their own order
-- [] alarms and emails - requires adding an admin to the warehouse
-- [] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
+- [X] alarms and emails - requires adding an admin to the warehouse
+- [X] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
 - [X] check quantitá di prodotti nel carrello quando si va da catalog ad order
 - [] caches
 - [] available product quantity should be visible from catalog
 - [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
 - [] email in order controller
-- [] remove pairs of application.yml (FORSE NON SERVE)
+- [] remove pairs of application.yml (FORSE NON SERVE) - sembra servano entrambe, una per docker una per il service
 
 - chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)
 - Serve un ACK message dall'orderservice? Tipo "confirm messages received" da Kafka per cambiare lo stato nel DB di pickups?
