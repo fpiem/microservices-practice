@@ -2,11 +2,11 @@
 
 - [X] fix snake case in application.yml files
 - [] remove pairs of application.yml
-- [] usedId should be an ObjectId, separate from email
+- [] userId should be an ObjectId, separate from email
 - [X] users should be able to cancel their own order
 - [] alarms and emails - requires adding an admin to the warehouse
 - [] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
-- [] check quantitá di prodotti nel carrello quando si va da catalog ad order
+- [X] check quantitá di prodotti nel carrello quando si va da catalog ad order
 - [] caches
 - [] available product quantity should be visible from catalog
 

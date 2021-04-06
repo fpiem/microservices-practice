@@ -118,6 +118,10 @@ class ProductService(
 
         // update product prices in cart
         cart.forEach {
+            // check if quantity is > 0, else return null
+            if (it.quantity < 1)
+                return null
+            // update prices in cart
             val product = getProductById(it.productDTO.productId)
             if (product.isEmpty) {
                 LOGGER.debug("received request to place a order but a product is not present in the DB: ${it.productDTO.productId}")
