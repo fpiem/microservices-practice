@@ -6,6 +6,7 @@ import org.mapstruct.Mapper
 
 @Mapper(componentModel = "spring")
 interface UserMapper {
-    fun toUserDTO(user: User) : UserDTO
-    fun toUser(userDTO: UserDTO) : User
+    // TODO capire se si può correggere il mapping tra id in formato String e ObjectId
+    // fun toUserDTO(user: User) : UserDTO
+    // fun toUser(userDTO: UserDTO) : User
 }

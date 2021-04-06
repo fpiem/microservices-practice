@@ -87,7 +87,7 @@ class OrderService(
 
     // TODO: should this function be "suspend"?
     fun createNewOrder(orderPlacingDTO: OrderPlacingDTO): OrderDTO? {
-        LOGGER.debug("Received a request to place an order for user ${orderPlacingDTO.user.email}")
+        LOGGER.debug("Received a request to place an order for user ${orderPlacingDTO.user.userId}")
 
         val cart = orderPlacingDTO.cart.map { orderMapper.toModel(it) }
         val cartPrice = cart.sumByDouble { it.price * it.quantity }
@@ -109,7 +109,7 @@ class OrderService(
 
         try {
             val responseEntityWallet: HttpEntity<String> = restTemplate.exchange(
-                "$walletServiceAddress/${user.email}/transactions",
+                "$walletServiceAddress/${user.userId}/transactions",
                 HttpMethod.PUT,
                 requestEntityWallet,
                 String::class.java
@@ -167,7 +167,7 @@ class OrderService(
         // here all checks are successful
         // fill order information
         order.cart = cart as MutableList<CartElement>
-        order.buyer = user.email
+        order.buyer = user.userId
         order.deliveryList = deliveryList
 
         orderRepository.save(order)
@@ -206,7 +206,7 @@ class OrderService(
         // customer logic
         val query = Query().addCriteria(
             Criteria.where("orderId").`is`(orderId)
-                .and("buyer").`is`(user.email)
+                .and("buyer").`is`(user.userId)
                 .and("status").`is`(StatusType.ISSUED)
         )
         val update = Update().set("status", StatusType.CANCELLED)
