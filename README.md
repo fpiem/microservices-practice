@@ -12,13 +12,12 @@
 - [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
 - [] email in order controller
 - [] remove pairs of application.yml (FORSE NON SERVE) - sembra servano entrambe, una per docker una per il service
+- [X] Order updates in the database need to be **atomic**
 
 - chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)
 - Serve un ACK message dall'orderservice? Tipo "confirm messages received" da Kafka per cambiare lo stato nel DB di pickups?
 - Il vantaggio del db di pickup é che siamo in grado di tornare indietro se falliamo durante la selezione degli items dalla warehouse
-- Order updates in the database need to be **atomic**
-- Nelle warehouse check se le quantitá sono sotto l'allarme
-- TUTTI gli admin devono ricevere notifiche quando si aggiorna un ordine?
+- TUTTI gli admin devono ricevere notifiche quando si aggiorna un ordine? - abbiamo deciso contro in pratica
 
 ### DONE
 
