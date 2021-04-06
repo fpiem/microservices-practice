@@ -4,6 +4,9 @@ import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.service.ProductService
 import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.OrderDTO
+import it.polito.ap.common.dto.UserDTO
+import it.polito.ap.common.utils.StatusType
+import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -82,6 +85,16 @@ class ProductController(val productService: ProductService) {
             LOGGER.info("cannot place order")
             return ResponseEntity.badRequest().body(null)
         }
+    }
+
+    @PatchMapping("/{orderId}")
+    fun changeStatus(
+        @PathVariable orderId: ObjectId,
+        @RequestParam newStatus: StatusType,
+        authentication: Authentication
+    ): ResponseEntity<String> {
+        LOGGER.info("received request to modify order status")
+        return productService.modifyOrder(orderId, newStatus, authentication)
     }
 
     @GetMapping("/test")
