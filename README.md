@@ -1,18 +1,19 @@
 ### TODO List
 
-[] fix snake case in application.yml files
-[] remove pairs of application.yml
-[] usedId should be an ObjectId, separate from email
-[] users should be able to cancel their own order
-[] alarms and emails - requires adding an admin to the warehouse
-[] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
-[] check quantitá di prodotti nel carrello quando si va da catalog ad order
-[] caches
-[] available product quantity should be visible from catalog
+- [] fix snake case in application.yml files
+- [] remove pairs of application.yml
+- [] how to deploy the whole thing? docker-compose?
+- [] usedId should be an ObjectId, separate from email
+- [] users should be able to cancel their own order
+- [] admin should be able to do anything / change status of any order that's not been delivered
+- [] alarms and emails - requires adding an admin to the warehouse
+- [] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
+- [] check quantitá di prodotti nel carrello quando si va da catalog ad order
+- [] caches
+- [] available product quantity should be visible from catalog
+- [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
 
-- In warehouseservice, database di pickups (solo per differenziare dalle delivery dell'orderservice)
 - chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)
-- **PROBLEMA** per prof Forno, e se muoio esattamente inviando?
 - Serve un ACK message dall'orderservice? Tipo "confirm messages received" da Kafka per cambiare lo stato nel DB di pickups?
 - Il vantaggio del db di pickup é che siamo in grado di tornare indietro se falliamo durante la selezione degli items dalla warehouse
 - Order updates in the database need to be **atomic**

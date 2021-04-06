@@ -22,7 +22,8 @@ class WarehouseServiceApplication(
                 WarehouseProduct("prod2", 10, 3),
                 WarehouseProduct("prod3", 10, 4)
             ),
-            mutableListOf()
+            mutableListOf(),
+            listOf("piem@yopmail.com")
         )
         val warehouse2 = Warehouse(
             ObjectId("222222222222222222222222"), "warehouse2",
@@ -32,9 +33,11 @@ class WarehouseServiceApplication(
                 WarehouseProduct("prod4", 10, 3),
                 WarehouseProduct("prod5", 10, 4)
             ),
-            mutableListOf()
+            mutableListOf(),
+            listOf("ciccinopasticcino@yopmail.com")
         )
         warehouseRepository.saveAll(listOf(warehouse1, warehouse2))
+
     }
 }
 

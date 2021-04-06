@@ -10,6 +10,6 @@ class Warehouse(
     val warehouseId: ObjectId,
     val name: String,
     var inventory: MutableList<WarehouseProduct>,
-    var transactionList: MutableList<WarehouseTransaction>
+    var transactionList: MutableList<WarehouseTransaction>,
+    var adminEmails: List<String>
 )
-

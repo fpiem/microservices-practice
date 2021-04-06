@@ -6,11 +6,18 @@ import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
+import org.springframework.mail.SimpleMailMessage
+import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.mail.javamail.MimeMailMessage
 import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/warehouses")
-class WarehouseController(val warehouseService: WarehouseService, var mapper: WarehouseMapper) {
+class WarehouseController(
+    val warehouseService: WarehouseService,
+    var mapper: WarehouseMapper,
+    val emailSender: JavaMailSender
+) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(WarehouseController::class.java)
@@ -164,6 +171,16 @@ class WarehouseController(val warehouseService: WarehouseService, var mapper: Wa
             LOGGER.info("Could not compute the delivery list for order $orderId")
             return ResponseEntity(null, HttpStatus.BAD_REQUEST)
         }
+    }
+
+    @PostMapping("/mail/{body}")
+    fun mailTest(@PathVariable body: String) {
+        val message = SimpleMailMessage()
+        message.setSubject("warehouse test")
+        message.setText(body)
+        val test = listOf<String>("piem@yopmail.com", "ciccinopasticcino@yopmail.com")
+        message.setTo(*test.toTypedArray())
+        emailSender.send(message)
     }
 
 }

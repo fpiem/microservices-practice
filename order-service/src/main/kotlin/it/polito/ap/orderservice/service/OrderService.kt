@@ -164,7 +164,7 @@ class OrderService(
         }
 
         // here all checks are successful
-        //fill order information
+        // fill order information
         order.cart = cart as MutableList<CartElement>
         order.buyer = user.email
         order.deliveryList = deliveryList

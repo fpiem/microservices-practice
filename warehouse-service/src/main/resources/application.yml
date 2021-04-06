@@ -5,6 +5,22 @@ spring:
     bootstrap-servers: localhost:9092
     consumer:
       auto-offset-reset: earliest
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ap.warehouse.service@gmail.com
+    password: Warehouse1
+    protocol: smtp
+    properties:
+      mail:
+        debug: true
+        smtp:
+          auth: true
+          connectiontimeout: 5000
+          writetimeout: 5000
+          starttls:
+            enable: true
+
 
 logging:
   level:

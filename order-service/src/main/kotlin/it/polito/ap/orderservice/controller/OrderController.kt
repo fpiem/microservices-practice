@@ -16,8 +16,7 @@ import org.springframework.web.bind.annotation.*
 
 @RestController
 @RequestMapping("/orders")
-class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTemplate<String, String>
-) {
+class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTemplate<String, String>) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(OrderController::class.java)

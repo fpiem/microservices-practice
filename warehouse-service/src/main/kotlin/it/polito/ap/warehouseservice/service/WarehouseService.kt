@@ -20,16 +20,20 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.kafka.annotation.KafkaListener
+import org.springframework.mail.SimpleMailMessage
+import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
+import javax.mail.internet.InternetAddress
 
 
 @Service
 class WarehouseService(
     val warehouseRepository: WarehouseRepository,
     val mapper: WarehouseMapper,
-    val mongoTemplate: MongoTemplate
+    val mongoTemplate: MongoTemplate,
+    val mailSender: JavaMailSender
 ) {
 
     companion object {
@@ -48,6 +52,26 @@ class WarehouseService(
     fun rollbackOrder(orderId: String) {
         val warehouses = warehouseRepository.getWarehouseByOrderId(orderId)
         warehouses.forEach { rollbackWarehouse(it, orderId) }
+    }
+
+    fun sendAlarmEmail(admins: List<String>, product: WarehouseProduct) {
+        val message = SimpleMailMessage()
+        message.setSubject("${product.productId} - warehouse alarm")
+        message.setText(
+            """
+            Quantity of ${product.productId} is below the alarm threshold of ${product.alarmThreshold}.
+            Remaining quantity: ${product.quantity}.
+            """.trimIndent()
+        )
+        message.setTo(*admins.toTypedArray())
+    }
+
+    fun checkAlarmThreshold(warehouse: Warehouse, productId: String) {
+        // If this function is reached, warehouse and the product within it are assured to exist
+        val product = warehouse.inventory.firstOrNull { it.productId == productId }!!
+        if (product.quantity < product.alarmThreshold) {
+            sendAlarmEmail()
+        }
     }
 
     fun rollbackWarehouse(warehouse: Warehouse, orderId: String) {
