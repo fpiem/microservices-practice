@@ -24,7 +24,7 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
 
     @PostMapping("")
     suspend fun placeOrder(@RequestBody orderPlacingDTO: OrderPlacingDTO): ResponseEntity<OrderDTO?> {
-        LOGGER.info("Received a request to place an order for user ${orderPlacingDTO.user.email}")
+        LOGGER.info("Received a request to place an order for user ${orderPlacingDTO.user.userId}")
         val order = orderService.createNewOrder(orderPlacingDTO)
         order?.let {
             LOGGER.info("Order ${order.orderId} placed successfully!")
@@ -37,7 +37,7 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
 
     @GetMapping("/{orderId}/status")
     fun orderStatus(@PathVariable orderId: ObjectId, @RequestBody user: UserDTO): ResponseEntity<String> {
-        LOGGER.info("Received request for the status of $orderId by ${user.email} with role: ${user.role}!")
+        LOGGER.info("Received request for the status of $orderId by ${user.userId} with role: ${user.role}!")
         val order = orderService.getOrderById(orderId)
         if (order.isPresent) {
             LOGGER.info("Found order for id $orderId")
@@ -53,7 +53,7 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
         @RequestParam newStatus: StatusType,
         @RequestBody user: UserDTO
     ): ResponseEntity<String> {
-        LOGGER.info("Received request to change the status of $orderId to $newStatus from ${user.email} with role: ${user.role}!")
+        LOGGER.info("Received request to change the status of $orderId to $newStatus from ${user.userId} with role: ${user.role}!")
         return orderService.modifyOrder(orderId, newStatus, user)
     }
 

@@ -3,7 +3,7 @@
 - [X] fix snake case in application.yml files
 - [] remove pairs of application.yml
 - [] how to deploy the whole thing? docker-compose?
-- [] userId should be an ObjectId, separate from email
+- [X] userId should be an ObjectId, separate from email
 - [X] users should be able to cancel their own order
 - [] admin should be able to do anything / change status of any order that's not been delivered
 - [] alarms and emails - requires adding an admin to the warehouse

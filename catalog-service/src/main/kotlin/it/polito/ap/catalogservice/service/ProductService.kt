@@ -3,7 +3,6 @@ package it.polito.ap.catalogservice.service
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.model.User
 import it.polito.ap.catalogservice.repository.ProductRepository
-import it.polito.ap.catalogservice.service.mapper.UserMapper
 import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.OrderDTO
 import it.polito.ap.common.dto.OrderPlacingDTO
@@ -12,30 +11,25 @@ import it.polito.ap.common.utils.StatusType
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.http.HttpHeaders
-import org.springframework.http.MediaType
+import org.springframework.http.*
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Service
-import org.springframework.web.client.RestTemplate
-import java.util.*
-import org.springframework.http.HttpEntity
-import org.springframework.http.HttpMethod
-
-import org.springframework.http.ResponseEntity
-import org.springframework.http.HttpStatus
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
+import org.springframework.web.client.RestTemplate
+import java.util.*
 
 
 @Service
 class ProductService(
     val productRepository: ProductRepository,
     val userService: UserService,
-    val userMapper: UserMapper
+    //val userMapper: UserMapper
 ) {
     companion object {
         private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
+
     private val restTemplate = RestTemplate()
     private val headers = HttpHeaders()
 
@@ -114,7 +108,7 @@ class ProductService(
 
         // get user info
         val userDTO = createUserDTOFromLoggedUser(authentication) ?: return null // if user not exists return null
-        LOGGER.info("Received request to place an order for user ${userDTO.email}")
+        LOGGER.info("Received request to place an order for user ${userDTO.userId}")
 
         // update product prices in cart
         cart.forEach {
@@ -188,13 +182,13 @@ class ProductService(
         }
     }
 
-    private fun createUserDTOFromLoggedUser(authentication: Authentication) : UserDTO? {
+    private fun createUserDTOFromLoggedUser(authentication: Authentication): UserDTO? {
         val authenticationUser = authentication.principal as User
         val user = userService.getUserByEmail(authenticationUser.email)
         if (user == null) { // if user not exists return null
             LOGGER.debug("User not found")
             return null
         }
-        return userMapper.toUserDTO(user)
+        return UserDTO(user.userId.toString(), user.role)
     }
 }
