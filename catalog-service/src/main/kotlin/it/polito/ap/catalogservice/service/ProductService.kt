@@ -7,6 +7,9 @@ import it.polito.ap.catalogservice.service.mapper.UserMapper
 import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.OrderDTO
 import it.polito.ap.common.dto.OrderPlacingDTO
+import it.polito.ap.common.dto.UserDTO
+import it.polito.ap.common.utils.StatusType
+import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.HttpHeaders
@@ -33,8 +36,11 @@ class ProductService(
     companion object {
         private val LOGGER = LoggerFactory.getLogger(javaClass)
     }
+    private val restTemplate = RestTemplate()
+    private val headers = HttpHeaders()
 
-    @Value("\${application.order_address}") lateinit private var orderServiceAddress: String
+    @Value("\${application.order-address}")
+    private lateinit var orderServiceAddress: String
 
     // check if product already exists, if not product is added
     fun addProduct(product: Product): String {
@@ -107,17 +113,15 @@ class ProductService(
             return null
 
         // get user info
-        val authenticationUser = authentication.principal as User
-        val user = userService.getUserByEmail(authenticationUser.email)
-        if (user == null) { // if user not exists return null
-            LOGGER.debug("User not found, can't place order")
-            return null
-        }
-        LOGGER.info("Received request to place an order for user ${user.email}")
-        val userDTO = userMapper.toUserDTO(user)
+        val userDTO = createUserDTOFromLoggedUser(authentication) ?: return null // if user not exists return null
+        LOGGER.info("Received request to place an order for user ${userDTO.email}")
 
         // update product prices in cart
         cart.forEach {
+            // check if quantity is > 0, else return null
+            if (it.quantity < 1)
+                return null
+            // update prices in cart
             val product = getProductById(it.productDTO.productId)
             if (product.isEmpty) {
                 LOGGER.debug("received request to place a order but a product is not present in the DB: ${it.productDTO.productId}")
@@ -127,10 +131,7 @@ class ProductService(
         }
 
         // send info to order-service
-        val restTemplate = RestTemplate()
-        val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
-
         // TODO usare un mapper
         val orderPlacingDTO = OrderPlacingDTO(cart, userDTO, shippingAddress)
 
@@ -155,5 +156,45 @@ class ProductService(
         }
 
         return null
+    }
+
+    // TODO verificare che i controlli vadano fatti solo nell'order-service oppure anche qui
+    fun modifyOrder(orderId: ObjectId, newStatus: StatusType, authentication: Authentication): ResponseEntity<String> {
+        // get user info
+        val userDTO = createUserDTOFromLoggedUser(authentication)
+        if (userDTO == null) {
+            val statusString = "Cannot find user"
+            LOGGER.debug(statusString)
+            return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+        }
+
+        headers.contentType = MediaType.APPLICATION_JSON
+        val requestEntity = HttpEntity<UserDTO>(userDTO, headers)
+        return try {
+            restTemplate.exchange(
+                "$orderServiceAddress/$orderId?newStatus=$newStatus",
+                HttpMethod.PUT,
+                requestEntity,
+                String::class.java
+            )
+        } catch (e: HttpServerErrorException) {
+            val statusString = "Cannot change order status: ${e.message}"
+            LOGGER.debug(statusString)
+            ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+        } catch (e: HttpClientErrorException) {
+            val statusString = "Cannot change order status: ${e.message}"
+            LOGGER.debug(statusString)
+            ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+        }
+    }
+
+    private fun createUserDTOFromLoggedUser(authentication: Authentication) : UserDTO? {
+        val authenticationUser = authentication.principal as User
+        val user = userService.getUserByEmail(authenticationUser.email)
+        if (user == null) { // if user not exists return null
+            LOGGER.debug("User not found")
+            return null
+        }
+        return userMapper.toUserDTO(user)
     }
 }

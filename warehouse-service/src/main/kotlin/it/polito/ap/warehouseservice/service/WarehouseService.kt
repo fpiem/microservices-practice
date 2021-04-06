@@ -54,25 +54,25 @@ class WarehouseService(
         warehouses.forEach { rollbackWarehouse(it, orderId) }
     }
 
-    fun sendAlarmEmail(admins: List<String>, product: WarehouseProduct) {
-        val message = SimpleMailMessage()
-        message.setSubject("${product.productId} - warehouse alarm")
-        message.setText(
-            """
-            Quantity of ${product.productId} is below the alarm threshold of ${product.alarmThreshold}.
-            Remaining quantity: ${product.quantity}.
-            """.trimIndent()
-        )
-        message.setTo(*admins.toTypedArray())
-    }
-
-    fun checkAlarmThreshold(warehouse: Warehouse, productId: String) {
-        // If this function is reached, warehouse and the product within it are assured to exist
-        val product = warehouse.inventory.firstOrNull { it.productId == productId }!!
-        if (product.quantity < product.alarmThreshold) {
-            sendAlarmEmail()
-        }
-    }
+//    fun sendAlarmEmail(admins: List<String>, product: WarehouseProduct) {
+//        val message = SimpleMailMessage()
+//        message.setSubject("${product.productId} - warehouse alarm")
+//        message.setText(
+//            """
+//            Quantity of ${product.productId} is below the alarm threshold of ${product.alarmThreshold}.
+//            Remaining quantity: ${product.quantity}.
+//            """.trimIndent()
+//        )
+//        message.setTo(*admins.toTypedArray())
+//    }
+//
+//    fun checkAlarmThreshold(warehouse: Warehouse, productId: String) {
+//        // If this function is reached, warehouse and the product within it are assured to exist
+//        val product = warehouse.inventory.firstOrNull { it.productId == productId }!!
+//        if (product.quantity < product.alarmThreshold) {
+//            sendAlarmEmail()
+//        }
+//    }
 
     fun rollbackWarehouse(warehouse: Warehouse, orderId: String) {
         LOGGER.debug("Rolling back transactions for order $orderId in warehouse ${warehouse.warehouseId}")

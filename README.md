@@ -1,17 +1,18 @@
 ### TODO List
 
-- [] fix snake case in application.yml files
+- [X] fix snake case in application.yml files
 - [] remove pairs of application.yml
 - [] how to deploy the whole thing? docker-compose?
-- [] usedId should be an ObjectId, separate from email
-- [] users should be able to cancel their own order
+- [] userId should be an ObjectId, separate from email
+- [X] users should be able to cancel their own order
 - [] admin should be able to do anything / change status of any order that's not been delivered
 - [] alarms and emails - requires adding an admin to the warehouse
 - [] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
-- [] check quantitá di prodotti nel carrello quando si va da catalog ad order
+- [X] check quantitá di prodotti nel carrello quando si va da catalog ad order
 - [] caches
 - [] available product quantity should be visible from catalog
 - [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
+- [] email in order controller
 
 - chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)
 - Serve un ACK message dall'orderservice? Tipo "confirm messages received" da Kafka per cambiare lo stato nel DB di pickups?
@@ -33,3 +34,4 @@
 - Note: transactionTimestamp and transactionId are set once the Transaction object is obtained from the transactionDTO, they are not created in the transactionDTO. Questo é ok perché se il transactionService fallisce, comunque la transazione non é creata, e se ha successo, comunque la transazione é creata.
 - In productService editProduct non crea un nuovo prodotto in caso si cerchi di modificare un prodotto non presente nel DB, questo perchè si è deciso di "potenziare" la addProduct facendo dei controlli riguardo l'esistenza del prodotto (nella prima versione con la add si poteva sovrascrivere i prodotti senza problemi)
 - We were not able to create a warehouse product delivery list in a transactional way. Instead, we decided to first the contents of the warehouse, then trying to atomically update based on the read contents, and failing the order creation (and therefore rolling back) if this brings the quantity of any product below zero.
+- In order-service, changeStatus è una PUT e non una PATCH perchè facilita la comunicazione dal catalog-service

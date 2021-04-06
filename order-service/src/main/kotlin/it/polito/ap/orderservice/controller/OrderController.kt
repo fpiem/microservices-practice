@@ -47,7 +47,7 @@ class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTe
         return ResponseEntity.badRequest().body("No order found with the requested Id")
     }
 
-    @PatchMapping("/{orderId}")
+    @PutMapping("/{orderId}")
     fun changeStatus(
         @PathVariable orderId: ObjectId,
         @RequestParam newStatus: StatusType,
