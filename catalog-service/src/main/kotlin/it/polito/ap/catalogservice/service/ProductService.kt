@@ -13,6 +13,9 @@ import it.polito.ap.common.utils.StatusType
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.cache.annotation.CacheEvict
+import org.springframework.cache.annotation.CachePut
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -49,6 +52,7 @@ class ProductService(
 
     // Receive product quantities from the WarehouseService via Kafka messages
     @KafkaListener(groupId = "product_service", topics=["product_quantities"])
+    @CacheEvict(value = ["product"])
     fun updateProductQuantities(message: String) {
         LOGGER.debug("Received updated quantities of stored products")
         val productQuantities = jacksonObjectMapper.readValue<Map<String, Int>>(message)
@@ -70,6 +74,15 @@ class ProductService(
         }
     }
 
+//    @CachePut(value = ["product"], key = "#product.name")
+    fun saveNewProduct(product: Product): Product? {
+        // Wrapped function for caching purposes
+        LOGGER.debug("Saving product ${product.name} in the database")
+        val savedProduct = productRepository.save(product)
+        LOGGER.debug("Saved product ${product.name} in the database")
+        return savedProduct
+    }
+
     // check if product already exists, if not product is added
     fun addProduct(product: Product): String {
         LOGGER.debug("received request to add product ${product.name}")
@@ -82,12 +95,13 @@ class ProductService(
             LOGGER.debug("product ${product.name} already present into the DB")
             return "product ${product.name} already present into the DB"
         } ?: kotlin.run {
-            productRepository.save(product)
+            saveNewProduct(product)
             LOGGER.debug("product ${product.name} added successfully")
             return "product ${product.name} added successfully"
         }
     }
 
+    @Cacheable(value = ["product"])
     fun getProductByName(productName: String): Product? {
         LOGGER.debug("Retrieving product $productName by name")
         val product = productRepository.findByName(productName)
@@ -109,12 +123,13 @@ class ProductService(
         return productRepository.findAll()
     }
 
+//    @CacheEvict(value = ["product"], key = "#productId")
     fun deleteProductById(productId: String) {
         LOGGER.debug("received request to delete product with id $productId")
         productRepository.deleteById(productId)
     }
 
-    // TODO: test
+    @CachePut(value = ["product"])
     fun editProduct(productName: String, newProduct: Product): Product? {
         val product = getProductByName(productName)
         if (product == null) {  // if not present it doesn't create a new product. For this use addProduct

@@ -64,8 +64,8 @@ class WarehouseService(
     }
 
     // Note, in practice, this function could be run late at night, when load on the service is low
-    @Scheduled(cron = "0 1/1 * * * ?")
-//    @Scheduled(cron = "0 30 4 1/1 * ?")
+//    @Scheduled(cron = "0 1/1 * * * ?")
+    @Scheduled(cron = "0 30 4 1/1 * ?")
     fun gatherProductQuantities(): Map<String, Int> {
         // Avoid loading all warehouses simultaneously in memory
         val warehouseIds = getAllWarehouseIds()

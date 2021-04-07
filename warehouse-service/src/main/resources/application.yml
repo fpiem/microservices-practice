@@ -4,7 +4,7 @@ spring:
   cache:
     cache-names: "warehouse"
     caffeine:
-      spec: expireAfterWrite=10s
+      spec: expireAfterWrite=60s
     type: caffeine
   kafka:
     bootstrap-servers: localhost:9092
