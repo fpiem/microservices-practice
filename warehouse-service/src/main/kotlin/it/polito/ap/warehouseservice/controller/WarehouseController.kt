@@ -206,4 +206,19 @@ class WarehouseController(
         }
     }
 
+    @GetMapping("/test1")
+    fun test1() {
+        var warehouseId = warehouseService.selectWarehouse("prod2")
+        println(warehouseId)
+        editProduct(
+            "111111111111111111111111",
+            WarehouseProductDTO("prod2", -8, 1)
+        )
+        warehouseId = warehouseService.selectWarehouse("prod2")
+        println(warehouseId)
+        Thread.sleep(11000)
+        warehouseId = warehouseService.selectWarehouse("prod2")
+        println(warehouseId)
+    }
+
 }

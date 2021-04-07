@@ -7,9 +7,11 @@ import org.bson.types.ObjectId
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 import org.springframework.cache.annotation.EnableCaching
+import org.springframework.scheduling.annotation.EnableScheduling
 
 @SpringBootApplication
 @EnableCaching
+@EnableScheduling
 class WarehouseServiceApplication(
     warehouseRepository: WarehouseRepository
 ) {
@@ -21,7 +23,7 @@ class WarehouseServiceApplication(
             ObjectId("111111111111111111111111"), "warehouse1",
             mutableListOf(
                 WarehouseProduct("prod1", 10, 5),
-                WarehouseProduct("prod2", 10, 3),
+                WarehouseProduct("prod2", 10, 1),
                 WarehouseProduct("prod3", 10, 4)
             ),
             mutableListOf(),

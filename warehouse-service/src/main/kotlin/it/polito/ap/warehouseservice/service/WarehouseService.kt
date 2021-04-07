@@ -24,6 +24,7 @@ import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Isolation
 import org.springframework.transaction.annotation.Transactional
@@ -62,6 +63,9 @@ class WarehouseService(
         return warehouseRepository.getAllWarehouseIds()
     }
 
+    // Note, in practice, this function could be run late at night, when load on the service is low
+    @Scheduled(cron = "0 1/1 * * * ?")
+//    @Scheduled(cron = "0 30 4 1/1 * ?")
     fun gatherProductQuantities(): Map<String, Int> {
         // Avoid loading all warehouses simultaneously in memory
         val warehouseIds = getAllWarehouseIds()
@@ -145,8 +149,8 @@ class WarehouseService(
         return warehouse
     }
 
-    // TODO: cache
-    private fun selectWarehouse(productId: String): String? {
+    @Cacheable(value = ["warehouse"])
+    fun selectWarehouse(productId: String): String? {
         val warehouseIds = warehouseRepository.getWarehouseByMaxProductQuantity(productId)
         return if (warehouseIds.isEmpty()) {
             LOGGER.debug("No warehouse containing product $productId found")

@@ -17,6 +17,7 @@ import org.springframework.web.client.RestTemplate
 @RestController
 @RequestMapping("/products")
 class ProductController(val productService: ProductService) {
+
     companion object {
         private val LOGGER = LoggerFactory.getLogger(ProductController::class.java)
     }

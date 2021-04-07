@@ -1,5 +1,7 @@
 package it.polito.ap.catalogservice.service
 
+import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
+import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.model.User
 import it.polito.ap.catalogservice.repository.ProductRepository
@@ -11,7 +13,13 @@ import it.polito.ap.common.utils.StatusType
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.data.mongodb.core.FindAndModifyOptions
+import org.springframework.data.mongodb.core.MongoTemplate
+import org.springframework.data.mongodb.core.query.Criteria
+import org.springframework.data.mongodb.core.query.Query
+import org.springframework.data.mongodb.core.query.Update
 import org.springframework.http.*
+import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.security.core.Authentication
 import org.springframework.stereotype.Service
 import org.springframework.web.client.HttpClientErrorException
@@ -24,17 +32,43 @@ import java.util.*
 class ProductService(
     val productRepository: ProductRepository,
     val userService: UserService,
-    //val userMapper: UserMapper
+    val mongoTemplate: MongoTemplate
 ) {
+
     companion object {
         private val LOGGER = LoggerFactory.getLogger(ProductService::class.java)
     }
+
+    val jacksonObjectMapper = jacksonObjectMapper()
 
     private val restTemplate = RestTemplate()
     private val headers = HttpHeaders()
 
     @Value("\${application.order-address}")
     private lateinit var orderServiceAddress: String
+
+    // Receive product quantities from the WarehouseService via Kafka messages
+    @KafkaListener(groupId = "product_service", topics=["product_quantities"])
+    fun updateProductQuantities(message: String) {
+        LOGGER.debug("Received updated quantities of stored products")
+        val productQuantities = jacksonObjectMapper.readValue<Map<String, Int>>(message)
+        productQuantities.forEach { (name, quantity) -> updateProductQuantity(name, quantity) }
+        LOGGER.debug("Updated product quantities")
+    }
+
+    fun updateProductQuantity(productName: String, productQuantity: Int) {
+        LOGGER.debug("Updating quantity of product $productName")
+        val query = Query().addCriteria(Criteria.where("name").`is`(productName))
+        val update = Update().set("quantity", productQuantity)
+        val updatedWarehouse = mongoTemplate.findAndModify(
+            query, update, FindAndModifyOptions().returnNew(true), Product::class.java
+        )
+        updatedWarehouse?.let {
+            LOGGER.debug("Quantity of product $productName updated successfully - new quantity: $productQuantity")
+        } ?: kotlin.run {
+            LOGGER.debug("Could not find product in the database")
+        }
+    }
 
     // check if product already exists, if not product is added
     fun addProduct(product: Product): String {
@@ -55,12 +89,12 @@ class ProductService(
     }
 
     fun getProductByName(productName: String): Product? {
-        LOGGER.debug("received request to retrieve product $productName")
-        val product: Product? = productRepository.findByName(productName)
+        LOGGER.debug("Retrieving product $productName by name")
+        val product = productRepository.findByName(productName)
         product?.let {
-            LOGGER.debug("found product $productName")
+            LOGGER.debug("Product $productName successfully retrieved")
         } ?: kotlin.run {
-            LOGGER.debug("product $productName not found into the DB")
+            LOGGER.debug("Could not find product $productName in the database")
         }
         return product
     }
@@ -80,25 +114,44 @@ class ProductService(
         productRepository.deleteById(productId)
     }
 
-    fun editProduct(productId: String, newProduct: Product): Product? {
-        val product = getProductById(productId)
-        if (product.isEmpty) { // if not present it doesn't create a new product. For this use addProduct
-            LOGGER.debug("received request to edit a product that in not present in the DB: $productId")
+    // TODO: test
+    fun editProduct(productName: String, newProduct: Product): Product? {
+        val product = getProductByName(productName)
+        if (product == null) {  // if not present it doesn't create a new product. For this use addProduct
+            LOGGER.debug("received request to edit a product that in not present in the DB: $productName")
             return null
         }
-        if ("" != newProduct.name)
-            product.get().name = newProduct.name
-        if ("" != newProduct.category)
-            product.get().category = newProduct.category
-        if ("" != newProduct.description)
-            product.get().description = newProduct.description
-        if ("" != newProduct.picture)
-            product.get().picture = newProduct.picture
-        if (!0.0.equals(newProduct.price))
-            product.get().price = newProduct.price
-        productRepository.save(product.get())
 
-        return product.get()
+        if ("" != newProduct.name)
+            product.name = newProduct.name
+        if (null != newProduct.category)
+            product.category = newProduct.category
+        if ("" != newProduct.description)
+            product.description = newProduct.description
+        if ("" != newProduct.picture)
+            product.picture = newProduct.picture
+        if (!0.0.equals(newProduct.price))
+            product.price = newProduct.price
+        if (0 != newProduct.quantity)
+            product.quantity = newProduct.quantity
+
+        val query = Query().addCriteria(Criteria.where("name").`is`(productName))
+        val update = Update()
+            .set("name", product.name)
+            .set("category", product.category)
+            .set("description", product.description)
+            .set("picture", product.picture)
+            .set("price", product.price)
+            .set("quantity", product.quantity)
+        val updatedProduct = mongoTemplate.findAndModify(
+            query, update, FindAndModifyOptions().returnNew(true), Product::class.java
+        )
+        updatedProduct?.let {
+            LOGGER.debug("Product $productName updated successfully")
+        } ?: kotlin.run {
+            LOGGER.debug("Could not update product $productName")
+        }
+        return updatedProduct
     }
 
     // TODO valutare del refactoring per questa funzione (placeOrder)

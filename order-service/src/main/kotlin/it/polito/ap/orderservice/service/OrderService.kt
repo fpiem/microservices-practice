@@ -11,7 +11,6 @@ import it.polito.ap.orderservice.model.Order
 import it.polito.ap.orderservice.model.utils.CartElement
 import it.polito.ap.orderservice.repository.OrderRepository
 import it.polito.ap.orderservice.service.mapper.OrderMapper
-import kotlinx.coroutines.delay
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -55,8 +54,8 @@ class OrderService(
 
     val jacksonObjectMapper = jacksonObjectMapper()
 
-    @KafkaListener(groupId = "order_service", topics = ["place_order"])
     // TODO: figure out if it is possible to use suspend + delay here instead of Thread.sleep()
+    @KafkaListener(groupId = "order_service", topics = ["place_order"])
     fun ensureOrderConsistency(message: String) {
         val orderId = jacksonObjectMapper.readValue<String>(message)
         LOGGER.debug("Ensuring consistency of order $orderId")
