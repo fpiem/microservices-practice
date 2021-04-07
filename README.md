@@ -1,23 +1,29 @@
 ### TODO List
 
+- [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
+- [] email in order controller
+- [] CustomerProductDTO, interfaccia nel catalog dovrebbe usare un DTO, al momento usa l'oggetto di modello
+    - Probabilmente il DTO puó essere un mapping 1 a 1 dal Product di modello
+    - ProductMapper per fare la conversione fra i due (dovrebbe essere 1 a 1 banalmente)
+- [] customer should be able to see their own wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
+- [] admins should be able to see anyone's wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
 - [X] fix snake case in application.yml files
-- [] how to deploy the whole thing? docker-compose?
+- [] how to deploy the whole thing? docker-compose? - DA FARE
 - [X] userId should be an ObjectId, separate from email
 - [X] users should be able to cancel their own order
 - [X] alarms and emails - requires adding an admin to the warehouse
 - [X] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
 - [X] check quantitá di prodotti nel carrello quando si va da catalog ad order
 - [] caches
-- [] available product quantity should be visible from catalog
-- [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
-- [] email in order controller
-- [] remove pairs of application.yml (FORSE NON SERVE) - sembra servano entrambi, una per docker una per il service
+- [X] available product quantity should be visible from catalog
+- [X] remove pairs of application.yml (FORSE NON SERVE) - sembra servano entrambi, una per docker una per il service
 - [X] Order updates in the database need to be **atomic**
 
 - chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)
 - Serve un ACK message dall'orderservice? Tipo "confirm messages received" da Kafka per cambiare lo stato nel DB di pickups?
 - Il vantaggio del db di pickup é che siamo in grado di tornare indietro se falliamo durante la selezione degli items dalla warehouse
 - TUTTI gli admin devono ricevere notifiche quando si aggiorna un ordine? - abbiamo deciso contro in pratica
+- Operazione di update quantitá prodotti nel catalog service inviata dal warehouse service - l'operazione é molto pesante, é previsto che venga fatta ad esempio di notte quando il carico sul servizio é basso
 
 ### DONE
 
@@ -34,3 +40,5 @@
 - We were not able to create a warehouse product delivery list in a transactional way. Instead, we decided to first the contents of the warehouse, then trying to atomically update based on the read contents, and failing the order creation (and therefore rolling back) if this brings the quantity of any product below zero.
 - In order-service, changeStatus è una PUT e non una PATCH perchè facilita la comunicazione dal catalog-service
 - admin should be able to do anything / change status of any order even if it has been delivered
+- descrivere le cache nel report
+- si assume che gli admin possano accedere direttamente al warehouse service 
