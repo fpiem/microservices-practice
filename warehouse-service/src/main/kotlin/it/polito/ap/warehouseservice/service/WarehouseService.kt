@@ -14,12 +14,14 @@ import it.polito.ap.warehouseservice.model.utils.WarehouseTransactionStatus
 import it.polito.ap.warehouseservice.repository.WarehouseRepository
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
 import org.slf4j.LoggerFactory
+import org.springframework.cache.annotation.Cacheable
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.kafka.annotation.KafkaListener
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
@@ -33,7 +35,8 @@ class WarehouseService(
     val warehouseRepository: WarehouseRepository,
     val mapper: WarehouseMapper,
     val mongoTemplate: MongoTemplate,
-    val mailSender: JavaMailSender
+    val mailSender: JavaMailSender,
+    val kafkaTemplate: KafkaTemplate<String, String>
 ) {
 
     companion object {
@@ -52,6 +55,29 @@ class WarehouseService(
     fun rollbackOrder(orderId: String) {
         val warehouses = warehouseRepository.getWarehouseByOrderId(orderId)
         warehouses.forEach { rollbackWarehouse(it, orderId) }
+    }
+
+    fun getAllWarehouseIds(): List<String> {
+        LOGGER.debug("Listing the Id of all warehouses")
+        return warehouseRepository.getAllWarehouseIds()
+    }
+
+    fun gatherProductQuantities(): Map<String, Int> {
+        // Avoid loading all warehouses simultaneously in memory
+        val warehouseIds = getAllWarehouseIds()
+
+        LOGGER.debug("Gathering product quantities across all warehouses")
+        val productQuantities = mutableMapOf<String, Int>()
+        warehouseIds.forEach { warehouseId ->
+            val warehouse = getWarehouseByWarehouseId(warehouseId)
+            warehouse!!.inventory.forEach { product ->
+                productQuantities[product.productId] = (productQuantities[product.productId] ?: 0) + product.quantity
+            }
+        }
+
+        LOGGER.debug("Sending product quantity information")
+        kafkaTemplate.send("product_quantities", jacksonObjectMapper.writeValueAsString(productQuantities))
+        return productQuantities
     }
 
     fun sendAlarmEmail(admins: List<String>, product: WarehouseProduct) {
@@ -107,8 +133,8 @@ class WarehouseService(
         }
     }
 
-    // TODO: add cache
-    private fun getWarehouseByWarehouseId(warehouseId: String): Warehouse? {
+    @Cacheable(value = ["warehouse"])
+    fun getWarehouseByWarehouseId(warehouseId: String): Warehouse? {
         LOGGER.debug("Attempting to retrieve warehouse $warehouseId from the database")
         val warehouse = warehouseRepository.getWarehouseByWarehouseId(warehouseId)
         warehouse?.let {

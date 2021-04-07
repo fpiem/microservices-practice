@@ -27,7 +27,7 @@ class ProductService(
     //val userMapper: UserMapper
 ) {
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(ProductService::class.java)
     }
 
     private val restTemplate = RestTemplate()

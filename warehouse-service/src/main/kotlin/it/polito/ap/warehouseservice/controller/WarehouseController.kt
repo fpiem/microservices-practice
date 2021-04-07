@@ -1,6 +1,7 @@
 package it.polito.ap.warehouseservice.controller
 
 import it.polito.ap.common.dto.*
+import it.polito.ap.warehouseservice.repository.WarehouseRepository
 import it.polito.ap.warehouseservice.service.WarehouseService
 import it.polito.ap.warehouseservice.service.mapper.WarehouseMapper
 import org.slf4j.LoggerFactory
@@ -16,7 +17,8 @@ import org.springframework.web.bind.annotation.*
 class WarehouseController(
     val warehouseService: WarehouseService,
     var mapper: WarehouseMapper,
-    val emailSender: JavaMailSender
+    val emailSender: JavaMailSender,
+    val warehouseRepository: WarehouseRepository
 ) {
 
     companion object {
@@ -181,6 +183,27 @@ class WarehouseController(
         val test = listOf<String>("piem@yopmail.com", "ciccinopasticcino@yopmail.com")
         message.setTo(*test.toTypedArray())
         emailSender.send(message)
+    }
+
+    @GetMapping("/test")
+    fun test() {
+        var warehouse = warehouseService.getWarehouseByWarehouseId("111111111111111111111111")
+        warehouse!!.inventory.forEach {
+            println("${it.productId} - ${it.quantity}")
+        }
+        editProduct(
+            "111111111111111111111111",
+            WarehouseProductDTO("prod1", 1000, 10)
+        )
+        warehouse = warehouseService.getWarehouseByWarehouseId("111111111111111111111111")
+        warehouse!!.inventory.forEach {
+            println("${it.productId} - ${it.quantity}")
+        }
+        Thread.sleep(11000)
+        warehouse = warehouseService.getWarehouseByWarehouseId("111111111111111111111111")
+        warehouse!!.inventory.forEach {
+            println("${it.productId} - ${it.quantity}")
+        }
     }
 
 }

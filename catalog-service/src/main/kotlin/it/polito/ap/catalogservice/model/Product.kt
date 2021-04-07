@@ -11,7 +11,8 @@ class Product(
     var description: String = "",
     var picture: String = "",
     var category: String = "",
-    var price: Double = 0.0
+    var price: Double = 0.0,
+    var quantity: Int = 0  // Cached info from WarehouseService
 ){
     init {
         if (price <= 0.0) {

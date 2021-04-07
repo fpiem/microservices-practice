@@ -11,7 +11,7 @@
 - [] available product quantity should be visible from catalog
 - [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
 - [] email in order controller
-- [] remove pairs of application.yml (FORSE NON SERVE) - sembra servano entrambe, una per docker una per il service
+- [] remove pairs of application.yml (FORSE NON SERVE) - sembra servano entrambi, una per docker una per il service
 - [X] Order updates in the database need to be **atomic**
 
 - chiave primaria orderId, poi warehouseId, e productId e quantity prelevata da quel warehouse + **stato** (delivered, not delivered)

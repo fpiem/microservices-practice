@@ -6,8 +6,10 @@ import it.polito.ap.warehouseservice.repository.WarehouseRepository
 import org.bson.types.ObjectId
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
+import org.springframework.cache.annotation.EnableCaching
 
 @SpringBootApplication
+@EnableCaching
 class WarehouseServiceApplication(
     warehouseRepository: WarehouseRepository
 ) {

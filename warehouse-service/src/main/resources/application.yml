@@ -1,6 +1,11 @@
 spring:
   application:
     name: warehouse-service
+  cache:
+    cache-names: "warehouse"
+    caffeine:
+      spec: expireAfterWrite=30s
+    type: caffeine
   kafka:
     bootstrap-servers: localhost:9092
     consumer:

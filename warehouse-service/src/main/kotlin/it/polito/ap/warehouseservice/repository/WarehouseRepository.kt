@@ -1,6 +1,7 @@
 package it.polito.ap.warehouseservice.repository
 
 import it.polito.ap.warehouseservice.model.Warehouse
+import org.bson.types.ObjectId
 import org.springframework.data.mongodb.repository.Aggregation
 import org.springframework.data.mongodb.repository.MongoRepository
 import org.springframework.data.mongodb.repository.Query
@@ -22,5 +23,8 @@ interface WarehouseRepository : MongoRepository<Warehouse, String> {
         "{'\$project':{_id: 1}}"
     )
     fun getWarehouseByMaxProductQuantity(productId: String): List<String>
+
+    @Aggregation("{'\$project':{_id: 1}}")
+    fun getAllWarehouseIds(): List<String>
 
 }
