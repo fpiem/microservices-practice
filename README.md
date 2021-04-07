@@ -1,7 +1,7 @@
 ### TODO List
 
-- [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato
-- [] email in order controller
+- [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato => REST calls nel catalog da un admin?
+- [] email in order controller - che admin ricevono le mail?
 - [] CustomerProductDTO, interfaccia nel catalog dovrebbe usare un DTO, al momento usa l'oggetto di modello
     - Probabilmente il DTO puó essere un mapping 1 a 1 dal Product di modello
     - ProductMapper per fare la conversione fra i due (dovrebbe essere 1 a 1 banalmente)
