@@ -187,7 +187,6 @@ class OrderService(
         return orderRepository.findById(orderId.toString())
     }
 
-    // TODO fare un check se è tutto giusto
     fun modifyOrder(orderId: ObjectId, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
         LOGGER.debug("Receiving request to modify status for order $orderId")
         // admin logic
@@ -202,7 +201,7 @@ class OrderService(
 
             updateStatus?.let {
                 LOGGER.debug("Order modified by admin! Order status: ${updateStatus.status}")
-                if (updateStatus.status == StatusType.CANCELLED)
+                if (updateStatus.status == StatusType.CANCELLED || updateStatus.status == StatusType.FAILED) // rollback is needed just in these two cases
                     orderRollback(updateStatus.orderId.toString())
                 sendEmail(updateStatus, user)
                 return ResponseEntity.ok("Order modified by admin! Order status: ${updateStatus.status}")
