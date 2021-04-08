@@ -1,0 +1,19 @@
+application:
+  warehouse-address: http://localhost:8184/warehouses
+  wallet-address: http://localhost:8183/wallets
+  consistency-check-timeout-ms: 30000
+
+spring:
+  application:
+    name: order-service
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
+
+logging:
+  level:
+    it.polito.ap.orderservice: DEBUG
+
+server:
+  port: 8182
