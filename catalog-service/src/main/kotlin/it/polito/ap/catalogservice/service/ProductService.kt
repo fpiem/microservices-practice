@@ -5,6 +5,7 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.model.User
 import it.polito.ap.catalogservice.repository.ProductRepository
+import it.polito.ap.catalogservice.repository.UserRepository
 import it.polito.ap.catalogservice.service.mapper.CustomerProductDTOMapper
 import it.polito.ap.common.dto.*
 import it.polito.ap.common.utils.RoleType
@@ -38,6 +39,7 @@ inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object :
 @Service
 class ProductService(
     val productRepository: ProductRepository,
+    val userRepository: UserRepository,
     val userService: UserService,
     val mongoTemplate: MongoTemplate,
     val customerProductDTOMapper: CustomerProductDTOMapper
@@ -372,5 +374,26 @@ class ProductService(
         }
         LOGGER.debug("Unauthorized request to retrieve wallet transactions")
         return ResponseEntity(null, HttpStatus.UNAUTHORIZED)
+    }
+
+    // here should be implemented a logic to retrieve an admin, right now we take some random admins
+    fun getAdminsEmail(): ArrayList<String>? {
+        LOGGER.debug("Request to retrieve admins email")
+        val admins = userRepository.findByRole(RoleType.ROLE_ADMIN)
+
+        admins?.let {
+            // in our random logic, we take first 3 admins
+            val emails = ArrayList<String>()
+            admins.take(3).forEach { emails.add(it.email) }
+            return emails
+        } ?: kotlin.run {
+            LOGGER.debug("No admin found")
+            return null
+        }
+
+    }
+
+    fun getEmailById(userId: ObjectId): String? {
+        return userRepository.findByUserId(userId)?.email
     }
 }

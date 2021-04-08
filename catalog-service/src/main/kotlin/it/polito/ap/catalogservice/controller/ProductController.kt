@@ -130,5 +130,17 @@ class ProductController(val productService: ProductService) {
         return productService.getWalletTransactions(userId, authentication)
     }
 
+    @GetMapping("/getAdminsEmail")
+    fun getAdminsEmail(): ArrayList<String>? {
+        LOGGER.info("received request to retrieve admins email")
+        return productService.getAdminsEmail()
+    }
+
+    @GetMapping("/getEmail/{userId}")
+    fun getEmailById(@PathVariable userId: ObjectId): String? {
+        LOGGER.info("received request to retrieve email for user $userId")
+        return productService.getEmailById(userId)
+    }
+
     // TODO creare AdminController e inserire API per modificare il warehouse (load/unload product)
 }
