@@ -13,10 +13,10 @@ class WalletServiceApplication(
     walletRepository: WalletRepository
 ) {
     init {
-        walletRepository.deleteAll()
-        val wallet1 = Wallet(ObjectId("333333333333333333333333"))
-        val wallet2 = Wallet(ObjectId("444444444444444444444444"))
-        walletRepository.saveAll(listOf(wallet1, wallet2))
+//        walletRepository.deleteAll()
+//        val wallet1 = Wallet(ObjectId("111111111111111111111111"))
+//        val wallet2 = Wallet(ObjectId("222222222222222222222222"))
+//        walletRepository.saveAll(listOf(wallet1, wallet2))
 
 //        walletRepository.deleteAll()
 

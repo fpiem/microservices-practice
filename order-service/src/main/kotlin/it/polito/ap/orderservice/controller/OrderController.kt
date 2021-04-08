@@ -11,12 +11,17 @@ import org.slf4j.LoggerFactory
 import org.springframework.http.ResponseEntity
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.kafka.core.KafkaTemplate
+import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.web.bind.annotation.*
 
 
 @RestController
 @RequestMapping("/orders")
-class OrderController(val orderService: OrderService, val kafkaTemplate: KafkaTemplate<String, String>) {
+class OrderController(
+    val orderService: OrderService,
+    val kafkaTemplate: KafkaTemplate<String, String>,
+    val emailSender: JavaMailSender
+) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(OrderController::class.java)

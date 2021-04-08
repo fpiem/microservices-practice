@@ -23,6 +23,8 @@ import org.springframework.data.mongodb.core.query.Update
 import org.springframework.http.*
 import org.springframework.kafka.annotation.KafkaListener
 import org.springframework.kafka.core.KafkaTemplate
+import org.springframework.mail.SimpleMailMessage
+import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.stereotype.Service
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
@@ -39,16 +41,24 @@ class OrderService(
     val orderMapper: OrderMapper,
     val mongoTemplate: MongoTemplate,
     val kafkaTemplate: KafkaTemplate<String, String>,
+    val emailSender: JavaMailSender
 ) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(OrderService::class.java)
     }
 
+    private val restTemplate = RestTemplate()
+
     @Value("\${application.wallet-address}")
     private lateinit var walletServiceAddress: String
+
     @Value("\${application.warehouse-address}")
     private lateinit var warehouseServiceAddress: String
+
+    @Value("\${application.catalog-address}")
+    private lateinit var catalogServiceAddress: String
+
     @Value("\${application.consistency-check-timeout-ms}")
     private lateinit var consistencyCheckTimeoutMillis: Number
 
@@ -99,12 +109,9 @@ class OrderService(
         // send info to wallet-service
         val transactionDTO = TransactionDTO(order.orderId.toString(), -cartPrice, TransactionMotivation.ORDER_PAYMENT)
 
-        val restTemplate = RestTemplate()
         val headers = HttpHeaders()
         headers.contentType = MediaType.APPLICATION_JSON
         val requestEntityWallet = HttpEntity<TransactionDTO>(transactionDTO, headers)
-
-        // TODO: kafka - inizio processo per order with orderId
 
         try {
             val responseEntityWallet: HttpEntity<String> = restTemplate.exchange(
@@ -180,8 +187,6 @@ class OrderService(
         return orderRepository.findById(orderId.toString())
     }
 
-    // TODO: send kafka message
-    // TODO fare un check se è tutto giusto
     fun modifyOrder(orderId: ObjectId, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
         LOGGER.debug("Receiving request to modify status for order $orderId")
         // admin logic
@@ -196,6 +201,9 @@ class OrderService(
 
             updateStatus?.let {
                 LOGGER.debug("Order modified by admin! Order status: ${updateStatus.status}")
+                if (updateStatus.status == StatusType.CANCELLED || updateStatus.status == StatusType.FAILED) // rollback is needed just in these two cases
+                    orderRollback(updateStatus.orderId.toString())
+                sendEmail(updateStatus, user)
                 return ResponseEntity.ok("Order modified by admin! Order status: ${updateStatus.status}")
             } ?: kotlin.run {
                 LOGGER.debug("Cannot change order status")
@@ -215,10 +223,89 @@ class OrderService(
 
         updateStatus?.let {
             LOGGER.debug("Order modified! Order status: ${updateStatus.status}")
+            orderRollback(updateStatus.orderId.toString()) // here we know order is CANCELLED
+            sendEmail(updateStatus, user)
             return ResponseEntity.ok("Order modified! Order status: ${updateStatus.status}")
         } ?: kotlin.run {
             LOGGER.debug("Unauthorized request to modify order status")
             return ResponseEntity("Unauthorized request", HttpStatus.UNAUTHORIZED)
+        }
+    }
+
+    private fun sendEmail(order: Order, user: UserDTO) {
+        val message = SimpleMailMessage()
+        message.setSubject("Change status for order ${order.orderId}")
+        message.setText(
+            """
+            Change status for order ${order.orderId}: ${order.status}
+            """.trimIndent()
+        )
+
+        // if a customer change his/her status, email sent to him/her and admins
+        val emails = getAdminsEmail()
+        if (emails == null) {
+            LOGGER.debug("Cannot retrieve admins email")
+            return // stop email sending
+        }
+
+        val customerEmail = order.buyer?.let { getEmailById(it) }
+        if (customerEmail == null) {
+            LOGGER.debug("Cannot retrieve customer email")
+            return // stop email sending
+        }
+        if (!emails.contains(customerEmail)) // if admin change his/her order we need this chech
+            emails.add(customerEmail)
+
+        // if status changed by admin, he/her receive the email too
+        if (user.role == RoleType.ROLE_ADMIN) {
+            // retrieve admin email
+            val adminEmail = getEmailById(user.userId)
+            if (adminEmail == null) {
+                LOGGER.debug("Cannot retrieve admin email")
+                return // stop email sending
+            }
+            // adminEmail is added just if it's not already present in emails (it could be retrieved by getAdminsEmail)
+            if (!emails.contains(adminEmail))
+                emails.add(adminEmail)
+        }
+
+        message.setTo(*emails.toTypedArray())
+        emailSender.send(message)
+    }
+
+    private fun getAdminsEmail(): ArrayList<String>? {
+        LOGGER.debug("Request to retrieve admins email")
+        return try {
+            restTemplate.exchange(
+                "$catalogServiceAddress/getAdminsEmail",
+                HttpMethod.GET,
+                null,
+                typeRef<ArrayList<String>>() // we need it to return a List
+            ).body
+        } catch (e: HttpServerErrorException) {
+            LOGGER.debug("Cannot retrieve admins email: ${e.message}")
+            return null
+        } catch (e: HttpClientErrorException) {
+            LOGGER.debug("Cannot retrieve admins email: ${e.message}")
+            return null
+        }
+    }
+
+    private fun getEmailById(userId: String): String? {
+        LOGGER.debug("Request to retrieve email for $userId")
+        return try {
+            restTemplate.exchange(
+                "$catalogServiceAddress/getEmail/$userId",
+                HttpMethod.GET,
+                null,
+                String::class.java
+            ).body
+        } catch (e: HttpServerErrorException) {
+            LOGGER.debug("Cannot retrieve email for $userId: ${e.message}")
+            return null
+        } catch (e: HttpClientErrorException) {
+            LOGGER.debug("Cannot retrieve email for $userId: ${e.message}")
+            return null
         }
     }
 

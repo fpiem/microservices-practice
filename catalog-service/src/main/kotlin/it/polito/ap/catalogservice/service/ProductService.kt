@@ -5,17 +5,19 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.model.User
 import it.polito.ap.catalogservice.repository.ProductRepository
-import it.polito.ap.common.dto.CartProductDTO
-import it.polito.ap.common.dto.OrderDTO
-import it.polito.ap.common.dto.OrderPlacingDTO
-import it.polito.ap.common.dto.UserDTO
+import it.polito.ap.catalogservice.repository.UserRepository
+import it.polito.ap.catalogservice.service.mapper.CustomerProductDTOMapper
+import it.polito.ap.common.dto.*
+import it.polito.ap.common.utils.RoleType
 import it.polito.ap.common.utils.StatusType
+import org.apache.kafka.common.protocol.types.Field
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
 import org.springframework.cache.annotation.Cacheable
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -28,21 +30,26 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.client.exchange
 import java.util.*
 
+// useful to manage return type such as List in exchange function
+inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
 
 @Service
 class ProductService(
     val productRepository: ProductRepository,
+    val userRepository: UserRepository,
     val userService: UserService,
-    val mongoTemplate: MongoTemplate
+    val mongoTemplate: MongoTemplate,
+    val customerProductDTOMapper: CustomerProductDTOMapper
 ) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(ProductService::class.java)
     }
 
-    val jacksonObjectMapper = jacksonObjectMapper()
+    private val jacksonObjectMapper = jacksonObjectMapper()
 
     private val restTemplate = RestTemplate()
     private val headers = HttpHeaders()
@@ -50,8 +57,11 @@ class ProductService(
     @Value("\${application.order-address}")
     private lateinit var orderServiceAddress: String
 
+    @Value("\${application.wallet-address}")
+    private lateinit var walletServiceAddress: String
+
     // Receive product quantities from the WarehouseService via Kafka messages
-    @KafkaListener(groupId = "product_service", topics=["product_quantities"])
+    @KafkaListener(groupId = "product_service", topics = ["product_quantities"])
     @CacheEvict(value = ["product"])
     fun updateProductQuantities(message: String) {
         LOGGER.debug("Received updated quantities of stored products")
@@ -74,30 +84,38 @@ class ProductService(
         }
     }
 
-    fun saveNewProduct(product: Product): Product? {
+    //    @CachePut(value = ["product"], key = "#product.name")
+    fun saveNewProduct(customerProductDTO: CustomerProductDTO): Product? {
         // Wrapped function for caching purposes
-        LOGGER.debug("Saving product ${product.name} in the database")
-        val savedProduct = productRepository.save(product)
-        LOGGER.debug("Saved product ${product.name} in the database")
+        LOGGER.debug("Saving product ${customerProductDTO.name} in the database")
+        val savedProduct = productRepository.save(customerProductDTOMapper.toModel(customerProductDTO))
+        LOGGER.debug("Saved product ${customerProductDTO.name} in the database")
         return savedProduct
     }
 
     // check if product already exists, if not product is added
-    fun addProduct(product: Product): String {
-        LOGGER.debug("received request to add product ${product.name}")
-        if (product.name.isBlank()) {
+    fun addProduct(customerProductDTO: CustomerProductDTO): String {
+        LOGGER.debug("received request to add product ${customerProductDTO.name}")
+        if (!checkProductQuantity(customerProductDTO.quantity))
+            return "Provide a valid quantity: >= 0"
+        if (customerProductDTO.name.isBlank()) {
             LOGGER.debug("product name must be well formed (not empty or blank)")
             return "product name must be well formed (not empty or blank)"
         }
-        val productCheck: Product? = getProductByName(product.name)
+        val productCheck: Product? = getProductByName(customerProductDTO.name)
         productCheck?.let {
-            LOGGER.debug("product ${product.name} already present into the DB")
-            return "product ${product.name} already present into the DB"
+            LOGGER.debug("product ${customerProductDTO.name} already present into the DB")
+            return "product ${customerProductDTO.name} already present into the DB"
         } ?: kotlin.run {
-            saveNewProduct(product)
-            LOGGER.debug("product ${product.name} added successfully")
-            return "product ${product.name} added successfully"
+            saveNewProduct(customerProductDTO)
+            LOGGER.debug("product ${customerProductDTO.name} added successfully")
+            return "product ${customerProductDTO.name} added successfully"
         }
+    }
+
+    // return true if is valid
+    fun checkProductQuantity(productQuantity: Int): Boolean {
+        return productQuantity >= 0
     }
 
     @Cacheable(value = ["product"])
@@ -128,7 +146,9 @@ class ProductService(
         productRepository.deleteById(productId)
     }
 
-    fun editProduct(productName: String, newProduct: Product): Product? {
+    fun editProduct(productName: String, newProduct: CustomerProductDTO): Product? {
+        if (!checkProductQuantity(newProduct.quantity)) // if new quantity is invalid -> return null
+            return null
         val product = getProductByName(productName)
         if (product == null) {  // if not present it doesn't create a new product. For this use addProduct
             LOGGER.debug("received request to edit a product that in not present in the DB: $productName")
@@ -256,5 +276,123 @@ class ProductService(
             return null
         }
         return UserDTO(user.userId.toString(), user.role)
+    }
+
+    private fun retrieveLoggedUser(authentication: Authentication): User? {
+        val authenticationUser = authentication.principal as User
+        return userService.getUserByEmail(authenticationUser.email)
+    }
+
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    fun getWalletFunds(userId: String?, authentication: Authentication): ResponseEntity<Double> {
+        LOGGER.debug("Request to retrieve wallet funds")
+        val user = retrieveLoggedUser(authentication)
+        if (user == null) { // if user logged is not present in the db -> return
+            LOGGER.debug("Cannot find user in the database: $userId")
+            return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+        }
+        if (userId == null) { // retrieve wallet for logged user
+            LOGGER.debug("Request to retrieve wallet funds for logged user ${user.userId}")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/${user.userId}/funds",
+                    HttpMethod.GET,
+                    null,
+                    Double::class.java
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds: ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            }
+        }
+        if (user.role == RoleType.ROLE_ADMIN) { // admin only
+            LOGGER.debug("Request to retrieve wallet funds by admin for user $userId")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/$userId/funds",
+                    HttpMethod.GET,
+                    null,
+                    Double::class.java
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds, for user $userId: ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds, for user $userId: ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            }
+        }
+        LOGGER.debug("Unauthorized request to retrieve wallet funds")
+        return ResponseEntity(-1.0, HttpStatus.UNAUTHORIZED)
+    }
+
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    fun getWalletTransactions(userId: String?, authentication: Authentication): ResponseEntity<List<TransactionDTO>> {
+        LOGGER.debug("Request to retrieve wallet transactions")
+        val user = retrieveLoggedUser(authentication)
+        if (user == null) { // if user logged is not present in the db -> return
+            LOGGER.debug("Cannot find user in the database: $userId")
+            return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+        }
+        if (userId == null) { // retrieve wallet for logged user
+            LOGGER.debug("Request to retrieve wallet transactions for logged user ${user.userId}")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/${user.userId}/transactions",
+                    HttpMethod.GET,
+                    null,
+                    typeRef<List<TransactionDTO>>() // we need it to return a List
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions: ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            }
+        }
+        if (user.role == RoleType.ROLE_ADMIN) { // admin only
+            LOGGER.debug("Request to retrieve wallet transactions by admin for user $userId")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/$userId/transactions",
+                    HttpMethod.GET,
+                    null,
+                    typeRef<List<TransactionDTO>>() // we need it to return a List
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions, for user $userId: ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions, for user $userId: ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            }
+        }
+        LOGGER.debug("Unauthorized request to retrieve wallet transactions")
+        return ResponseEntity(null, HttpStatus.UNAUTHORIZED)
+    }
+
+    // here should be implemented a logic to retrieve an admin, right now we take some random admins
+    fun getAdminsEmail(): ArrayList<String>? {
+        LOGGER.debug("Request to retrieve admins email")
+        val admins = userRepository.findByRole(RoleType.ROLE_ADMIN)
+
+        admins?.let {
+            // in our random logic, we take first 3 admins
+            val emails = ArrayList<String>()
+            admins.take(3).forEach { emails.add(it.email) }
+            return emails
+        } ?: kotlin.run {
+            LOGGER.debug("No admin found")
+            return null
+        }
+
+    }
+
+    fun getEmailById(userId: ObjectId): String? {
+        return userRepository.findByUserId(userId)?.email
     }
 }

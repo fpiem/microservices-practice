@@ -3,8 +3,9 @@ package it.polito.ap.catalogservice.controller
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.service.ProductService
 import it.polito.ap.common.dto.CartProductDTO
+import it.polito.ap.common.dto.CustomerProductDTO
 import it.polito.ap.common.dto.OrderDTO
-import it.polito.ap.common.dto.UserDTO
+import it.polito.ap.common.dto.TransactionDTO
 import it.polito.ap.common.utils.StatusType
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
@@ -46,13 +47,16 @@ class ProductController(val productService: ProductService) {
     }
 
     @PostMapping("")
-    fun addProduct(@RequestBody product: Product): ResponseEntity<String> {
+    fun addProduct(@RequestBody product: CustomerProductDTO): ResponseEntity<String> {
         LOGGER.info("received request to add product ${product.name}")
         return ResponseEntity.ok(productService.addProduct(product))
     }
 
     @PutMapping("/{productId}")
-    fun editProduct(@PathVariable productId: String, @RequestBody newProduct: Product): ResponseEntity<Product> {
+    fun editProduct(
+        @PathVariable productId: String,
+        @RequestBody newProduct: CustomerProductDTO
+    ): ResponseEntity<Product> {
         LOGGER.info("received request to modify product with id $productId")
         val product = productService.editProduct(productId, newProduct)
         product?.let {
@@ -88,7 +92,7 @@ class ProductController(val productService: ProductService) {
         }
     }
 
-    @PatchMapping("/{orderId}")
+    @PutMapping("/order/{orderId}")
     fun changeStatus(
         @PathVariable orderId: ObjectId,
         @RequestParam newStatus: StatusType,
@@ -98,6 +102,39 @@ class ProductController(val productService: ProductService) {
         return productService.modifyOrder(orderId, newStatus, authentication)
     }
 
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    @GetMapping("/walletFunds")
+    fun getWalletFunds(
+        @RequestParam(required = false) userId: String?,
+        authentication: Authentication
+    ): ResponseEntity<Double> {
+        LOGGER.info("received request to retrieve wallet funds")
+        return productService.getWalletFunds(userId, authentication)
+    }
+
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    @GetMapping("/walletTransactions")
+    fun getWalletTransactions(
+        @RequestParam(required = false) userId: String?,
+        authentication: Authentication
+    ): ResponseEntity<List<TransactionDTO>> {
+        LOGGER.info("received request to retrieve wallet funds")
+        return productService.getWalletTransactions(userId, authentication)
+    }
+
+    @GetMapping("/getAdminsEmail")
+    fun getAdminsEmail(): ArrayList<String>? {
+        LOGGER.info("received request to retrieve admins email")
+        return productService.getAdminsEmail()
+    }
+
+    @GetMapping("/getEmail/{userId}")
+    fun getEmailById(@PathVariable userId: ObjectId): String? {
+        LOGGER.info("received request to retrieve email for user $userId")
+        return productService.getEmailById(userId)
+    }
+
+    // TODO cancellare funzioni di test
     @GetMapping("/test")
     fun test(): ResponseEntity<String> {
         LOGGER.info("test communication")

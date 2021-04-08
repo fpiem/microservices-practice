@@ -1,17 +1,13 @@
-package it.polito.ap.catalogservice.model
+package it.polito.ap.common.dto
 
 import it.polito.ap.common.utils.CategoryType
-import org.springframework.data.annotation.Id
-import org.springframework.data.mongodb.core.mapping.Document
 import java.lang.IllegalArgumentException
 
-@Document
-class Product(
-    @Id
+data class CustomerProductDTO(
     var name: String = "",
     var description: String = "",
     var picture: String = "",
     var category: CategoryType? = null,
     var price: Double = 0.0,
-    var quantity: Int = 0  // Cached info from WarehouseService
+    var quantity: Int = 0
 )
