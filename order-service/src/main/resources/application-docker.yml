@@ -1,15 +1,7 @@
 application:
-  warehouse-address: http://localhost:8184/warehouses
-  wallet-address: http://localhost:8183/wallets
+  warehouse-address: http://warehouse-service:8184/warehouses
+  wallet-address: http://wallet-service:8183/wallets
   consistency-check-timeout-ms: 30000
-
-spring:
-  application:
-    name: order-service
-  kafka:
-    bootstrap-servers: localhost:9092
-    consumer:
-      auto-offset-reset: earliest
 
 logging:
   level:
@@ -17,3 +9,14 @@ logging:
 
 server:
   port: 8182
+
+spring:
+  application:
+    name: order-service
+  data:
+    mongodb:
+      uri: mongodb://mongo:27017/OrderDB
+  kafka:
+    bootstrap-servers: broker:9092
+    consumer:
+      auto-offset-reset: earliest

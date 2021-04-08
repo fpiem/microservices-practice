@@ -74,7 +74,6 @@ class ProductService(
         }
     }
 
-//    @CachePut(value = ["product"], key = "#product.name")
     fun saveNewProduct(product: Product): Product? {
         // Wrapped function for caching purposes
         LOGGER.debug("Saving product ${product.name} in the database")
@@ -123,13 +122,12 @@ class ProductService(
         return productRepository.findAll()
     }
 
-//    @CacheEvict(value = ["product"], key = "#productId")
+    @CacheEvict(value = ["product"], key = "#productId")
     fun deleteProductById(productId: String) {
         LOGGER.debug("received request to delete product with id $productId")
         productRepository.deleteById(productId)
     }
 
-    @CachePut(value = ["product"])
     fun editProduct(productName: String, newProduct: Product): Product? {
         val product = getProductByName(productName)
         if (product == null) {  // if not present it doesn't create a new product. For this use addProduct
