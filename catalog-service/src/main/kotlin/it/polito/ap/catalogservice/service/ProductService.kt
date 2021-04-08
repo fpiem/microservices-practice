@@ -49,7 +49,7 @@ class ProductService(
         private val LOGGER = LoggerFactory.getLogger(ProductService::class.java)
     }
 
-    val jacksonObjectMapper = jacksonObjectMapper()
+    private val jacksonObjectMapper = jacksonObjectMapper()
 
     private val restTemplate = RestTemplate()
     private val headers = HttpHeaders()

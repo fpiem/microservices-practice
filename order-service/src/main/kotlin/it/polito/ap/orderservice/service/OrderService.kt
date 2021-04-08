@@ -48,7 +48,7 @@ class OrderService(
         private val LOGGER = LoggerFactory.getLogger(OrderService::class.java)
     }
 
-    val restTemplate = RestTemplate()
+    private val restTemplate = RestTemplate()
 
     @Value("\${application.wallet-address}")
     private lateinit var walletServiceAddress: String

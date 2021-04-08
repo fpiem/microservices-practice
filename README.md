@@ -1,7 +1,7 @@
 ### TODO List
 
 - [X] un cliente dovrebbe poter ordinare solamente prodotti che sono presenti nel catalog: controllare che piazzando un ordine l'id di tutti i prodotti nel carrello sia presente nel catalog
-- [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato => REST calls nel catalog da un admin?
+- [X] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato => REST calls nel catalog da un admin?
 - [X] email in order controller - che admin ricevono le mail?
 - [X] CustomerProductDTO, interfaccia nel catalog dovrebbe usare un DTO, al momento usa l'oggetto di modello
     - Probabilmente il DTO puó essere un mapping 1 a 1 dal Product di modello
@@ -46,3 +46,4 @@
 - In orderservice - @cacheable quando leggiamo un prodotto, @cacheput quando creiamo o modifichiamo un prodotto (=> al tempo di modifica il prodotto nuovo va direttamente in cache) e una @cacheevict quando ci arriva nel listener l'update dal warehouseservice. Questi valori meglio non metterli in cache perché staremmo cacheando l'intero db della warehouse circa
 - Da catalog-service a wallet-service: senza paramentro vengono retrieved le info dell'utente loggato, altrimenti viene eseguito codice riservato agli admin (con il paramentro si indica di quale utente vogliamo le info)
 - quando viene modificato lo stato di un ordine la mail viene inviata a: il buyer, 3 admin (random policy) e all'admin che modifica lo status se è lui a modificarlo (se è già presente tra gli admin selezionati dalla policy allora riceve una sola mail e non due)
+- Eseguire OrderStatusRoutine.kt per simulare stato avanzamento ordine

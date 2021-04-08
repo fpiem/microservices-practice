@@ -92,7 +92,7 @@ class ProductController(val productService: ProductService) {
         }
     }
 
-    @PatchMapping("/{orderId}")
+    @PutMapping("/order/{orderId}")
     fun changeStatus(
         @PathVariable orderId: ObjectId,
         @RequestParam newStatus: StatusType,
@@ -100,14 +100,6 @@ class ProductController(val productService: ProductService) {
     ): ResponseEntity<String> {
         LOGGER.info("received request to modify order status")
         return productService.modifyOrder(orderId, newStatus, authentication)
-    }
-
-    @GetMapping("/test")
-    fun test(): ResponseEntity<String> {
-        LOGGER.info("test communication")
-        val restTemplate = RestTemplate()
-        val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
-        return ResponseEntity.ok(res.toString())
     }
 
     // if no param the request is performed for the logger used, instead is performed just by admins
@@ -140,6 +132,15 @@ class ProductController(val productService: ProductService) {
     fun getEmailById(@PathVariable userId: ObjectId): String? {
         LOGGER.info("received request to retrieve email for user $userId")
         return productService.getEmailById(userId)
+    }
+
+    // TODO cancellare funzioni di test
+    @GetMapping("/test")
+    fun test(): ResponseEntity<String> {
+        LOGGER.info("test communication")
+        val restTemplate = RestTemplate()
+        val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
+        return ResponseEntity.ok(res.toString())
     }
 
     // TODO creare AdminController e inserire API per modificare il warehouse (load/unload product)
