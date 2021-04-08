@@ -187,7 +187,6 @@ class OrderService(
         return orderRepository.findById(orderId.toString())
     }
 
-    // TODO: send kafka message
     // TODO fare un check se è tutto giusto
     fun modifyOrder(orderId: ObjectId, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
         LOGGER.debug("Receiving request to modify status for order $orderId")
@@ -203,6 +202,8 @@ class OrderService(
 
             updateStatus?.let {
                 LOGGER.debug("Order modified by admin! Order status: ${updateStatus.status}")
+                if (updateStatus.status == StatusType.CANCELLED)
+                    orderRollback(updateStatus.orderId.toString())
                 sendEmail(updateStatus, user)
                 return ResponseEntity.ok("Order modified by admin! Order status: ${updateStatus.status}")
             } ?: kotlin.run {
@@ -223,6 +224,7 @@ class OrderService(
 
         updateStatus?.let {
             LOGGER.debug("Order modified! Order status: ${updateStatus.status}")
+            orderRollback(updateStatus.orderId.toString()) // here we know order is CANCELLED
             sendEmail(updateStatus, user)
             return ResponseEntity.ok("Order modified! Order status: ${updateStatus.status}")
         } ?: kotlin.run {
