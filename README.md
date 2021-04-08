@@ -6,8 +6,8 @@
 - [X] CustomerProductDTO, interfaccia nel catalog dovrebbe usare un DTO, al momento usa l'oggetto di modello
     - Probabilmente il DTO puó essere un mapping 1 a 1 dal Product di modello
     - ProductMapper per fare la conversione fra i due (dovrebbe essere 1 a 1 banalmente)
-- [] customer should be able to see their own wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
-- [] admins should be able to see anyone's wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
+- [X] customer should be able to see their own wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
+- [X] admins should be able to see anyone's wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
 - [X] fix snake case in application.yml files
 - [] how to deploy the whole thing? docker-compose? - DA FARE
 - [X] userId should be an ObjectId, separate from email
@@ -15,7 +15,7 @@
 - [X] alarms and emails - requires adding an admin to the warehouse
 - [X] alarms - aggiungere un check dopo le modifiche sulla quantitá per vedere se é scesa sotto la soglia di allarme
 - [X] check quantitá di prodotti nel carrello quando si va da catalog ad order
-- [] caches
+- [X] caches
 - [X] available product quantity should be visible from catalog
 - [X] remove pairs of application.yml (FORSE NON SERVE) - sembra servano entrambi, una per docker una per il service
 - [X] Order updates in the database need to be **atomic**
@@ -44,3 +44,4 @@
 - descrivere le cache nel report
 - si assume che gli admin possano accedere direttamente al warehouse service 
 - In orderservice - @cacheable quando leggiamo un prodotto, @cacheput quando creiamo o modifichiamo un prodotto (=> al tempo di modifica il prodotto nuovo va direttamente in cache) e una @cacheevict quando ci arriva nel listener l'update dal warehouseservice. Questi valori meglio non metterli in cache perché staremmo cacheando l'intero db della warehouse circa
+- Da catalog-service a wallet-service: senza paramentro vengono retrieved le info dell'utente loggato, altrimenti viene eseguito codice riservato agli admin (con il paramentro si indica di quale utente vogliamo le info)

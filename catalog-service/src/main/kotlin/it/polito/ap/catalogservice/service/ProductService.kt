@@ -7,6 +7,7 @@ import it.polito.ap.catalogservice.model.User
 import it.polito.ap.catalogservice.repository.ProductRepository
 import it.polito.ap.catalogservice.service.mapper.CustomerProductDTOMapper
 import it.polito.ap.common.dto.*
+import it.polito.ap.common.utils.RoleType
 import it.polito.ap.common.utils.StatusType
 import org.apache.kafka.common.protocol.types.Field
 import org.bson.types.ObjectId
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.cache.annotation.CacheEvict
 import org.springframework.cache.annotation.CachePut
 import org.springframework.cache.annotation.Cacheable
+import org.springframework.core.ParameterizedTypeReference
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
 import org.springframework.data.mongodb.core.query.Criteria
@@ -27,8 +29,11 @@ import org.springframework.stereotype.Service
 import org.springframework.web.client.HttpClientErrorException
 import org.springframework.web.client.HttpServerErrorException
 import org.springframework.web.client.RestTemplate
+import org.springframework.web.client.exchange
 import java.util.*
 
+// useful to manage return type such as List in exchange function
+inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object : ParameterizedTypeReference<T>() {}
 
 @Service
 class ProductService(
@@ -49,6 +54,9 @@ class ProductService(
 
     @Value("\${application.order-address}")
     private lateinit var orderServiceAddress: String
+
+    @Value("\${application.wallet-address}")
+    private lateinit var walletServiceAddress: String
 
     // Receive product quantities from the WarehouseService via Kafka messages
     @KafkaListener(groupId = "product_service", topics = ["product_quantities"])
@@ -86,7 +94,7 @@ class ProductService(
     // check if product already exists, if not product is added
     fun addProduct(customerProductDTO: CustomerProductDTO): String {
         LOGGER.debug("received request to add product ${customerProductDTO.name}")
-        if(!checkProductQuantity(customerProductDTO.quantity))
+        if (!checkProductQuantity(customerProductDTO.quantity))
             return "Provide a valid quantity: >= 0"
         if (customerProductDTO.name.isBlank()) {
             LOGGER.debug("product name must be well formed (not empty or blank)")
@@ -104,7 +112,7 @@ class ProductService(
     }
 
     // return true if is valid
-    fun checkProductQuantity(productQuantity: Int) : Boolean{
+    fun checkProductQuantity(productQuantity: Int): Boolean {
         return productQuantity >= 0
     }
 
@@ -138,7 +146,7 @@ class ProductService(
 
     @CachePut(value = ["product"])
     fun editProduct(productName: String, newProduct: CustomerProductDTO): Product? {
-        if(!checkProductQuantity(newProduct.quantity)) // if new quantity is invalid -> return null
+        if (!checkProductQuantity(newProduct.quantity)) // if new quantity is invalid -> return null
             return null
         val product = getProductByName(productName)
         if (product == null) {  // if not present it doesn't create a new product. For this use addProduct
@@ -267,5 +275,102 @@ class ProductService(
             return null
         }
         return UserDTO(user.userId.toString(), user.role)
+    }
+
+    private fun retrieveLoggedUser(authentication: Authentication): User? {
+        val authenticationUser = authentication.principal as User
+        return userService.getUserByEmail(authenticationUser.email)
+    }
+
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    fun getWalletFunds(userId: String?, authentication: Authentication): ResponseEntity<Double> {
+        LOGGER.debug("Request to retrieve wallet funds")
+        val user = retrieveLoggedUser(authentication)
+        if (user == null) { // if user logged is not present in the db -> return
+            LOGGER.debug("Cannot find user in the database: $userId")
+            return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+        }
+        if (userId == null) { // retrieve wallet for logged user
+            LOGGER.debug("Request to retrieve wallet funds for logged user ${user.userId}")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/${user.userId}/funds",
+                    HttpMethod.GET,
+                    null,
+                    Double::class.java
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds: ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            }
+        }
+        if (user.role == RoleType.ROLE_ADMIN) { // admin only
+            LOGGER.debug("Request to retrieve wallet funds by admin for user $userId")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/$userId/funds",
+                    HttpMethod.GET,
+                    null,
+                    Double::class.java
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds, for user $userId: ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet funds, for user $userId: ${e.message}")
+                return ResponseEntity(-1.0, HttpStatus.BAD_REQUEST)
+            }
+        }
+        LOGGER.debug("Unauthorized request to retrieve wallet funds")
+        return ResponseEntity(-1.0, HttpStatus.UNAUTHORIZED)
+    }
+
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    fun getWalletTransactions(userId: String?, authentication: Authentication): ResponseEntity<List<TransactionDTO>> {
+        LOGGER.debug("Request to retrieve wallet transactions")
+        val user = retrieveLoggedUser(authentication)
+        if (user == null) { // if user logged is not present in the db -> return
+            LOGGER.debug("Cannot find user in the database: $userId")
+            return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+        }
+        if (userId == null) { // retrieve wallet for logged user
+            LOGGER.debug("Request to retrieve wallet transactions for logged user ${user.userId}")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/${user.userId}/transactions",
+                    HttpMethod.GET,
+                    null,
+                    typeRef<List<TransactionDTO>>() // we need it to return a List
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions: ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            }
+        }
+        if (user.role == RoleType.ROLE_ADMIN) { // admin only
+            LOGGER.debug("Request to retrieve wallet transactions by admin for user $userId")
+            return try {
+                restTemplate.exchange(
+                    "$walletServiceAddress/$userId/transactions",
+                    HttpMethod.GET,
+                    null,
+                    typeRef<List<TransactionDTO>>() // we need it to return a List
+                )
+            } catch (e: HttpServerErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions, for user $userId: ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            } catch (e: HttpClientErrorException) {
+                LOGGER.debug("Cannot retrieve user wallet transactions, for user $userId: ${e.message}")
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            }
+        }
+        LOGGER.debug("Unauthorized request to retrieve wallet transactions")
+        return ResponseEntity(null, HttpStatus.UNAUTHORIZED)
     }
 }

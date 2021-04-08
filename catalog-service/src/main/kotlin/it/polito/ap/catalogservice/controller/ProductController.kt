@@ -5,6 +5,7 @@ import it.polito.ap.catalogservice.service.ProductService
 import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.CustomerProductDTO
 import it.polito.ap.common.dto.OrderDTO
+import it.polito.ap.common.dto.TransactionDTO
 import it.polito.ap.common.utils.StatusType
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
@@ -107,6 +108,26 @@ class ProductController(val productService: ProductService) {
         val restTemplate = RestTemplate()
         val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
         return ResponseEntity.ok(res.toString())
+    }
+
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    @GetMapping("/walletFunds")
+    fun getWalletFunds(
+        @RequestParam(required = false) userId: String?,
+        authentication: Authentication
+    ): ResponseEntity<Double> {
+        LOGGER.info("received request to retrieve wallet funds")
+        return productService.getWalletFunds(userId, authentication)
+    }
+
+    // if no param the request is performed for the logger used, instead is performed just by admins
+    @GetMapping("/walletTransactions")
+    fun getWalletTransactions(
+        @RequestParam(required = false) userId: String?,
+        authentication: Authentication
+    ): ResponseEntity<List<TransactionDTO>> {
+        LOGGER.info("received request to retrieve wallet funds")
+        return productService.getWalletTransactions(userId, authentication)
     }
 
     // TODO creare AdminController e inserire API per modificare il warehouse (load/unload product)
