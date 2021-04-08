@@ -5,11 +5,10 @@ import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.model.User
 import it.polito.ap.catalogservice.repository.ProductRepository
-import it.polito.ap.common.dto.CartProductDTO
-import it.polito.ap.common.dto.OrderDTO
-import it.polito.ap.common.dto.OrderPlacingDTO
-import it.polito.ap.common.dto.UserDTO
+import it.polito.ap.catalogservice.service.mapper.CustomerProductDTOMapper
+import it.polito.ap.common.dto.*
 import it.polito.ap.common.utils.StatusType
+import org.apache.kafka.common.protocol.types.Field
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -35,7 +34,8 @@ import java.util.*
 class ProductService(
     val productRepository: ProductRepository,
     val userService: UserService,
-    val mongoTemplate: MongoTemplate
+    val mongoTemplate: MongoTemplate,
+    val customerProductDTOMapper: CustomerProductDTOMapper
 ) {
 
     companion object {
@@ -51,7 +51,7 @@ class ProductService(
     private lateinit var orderServiceAddress: String
 
     // Receive product quantities from the WarehouseService via Kafka messages
-    @KafkaListener(groupId = "product_service", topics=["product_quantities"])
+    @KafkaListener(groupId = "product_service", topics = ["product_quantities"])
     @CacheEvict(value = ["product"])
     fun updateProductQuantities(message: String) {
         LOGGER.debug("Received updated quantities of stored products")
@@ -74,31 +74,38 @@ class ProductService(
         }
     }
 
-//    @CachePut(value = ["product"], key = "#product.name")
-    fun saveNewProduct(product: Product): Product? {
+    //    @CachePut(value = ["product"], key = "#product.name")
+    fun saveNewProduct(customerProductDTO: CustomerProductDTO): Product? {
         // Wrapped function for caching purposes
-        LOGGER.debug("Saving product ${product.name} in the database")
-        val savedProduct = productRepository.save(product)
-        LOGGER.debug("Saved product ${product.name} in the database")
+        LOGGER.debug("Saving product ${customerProductDTO.name} in the database")
+        val savedProduct = productRepository.save(customerProductDTOMapper.toModel(customerProductDTO))
+        LOGGER.debug("Saved product ${customerProductDTO.name} in the database")
         return savedProduct
     }
 
     // check if product already exists, if not product is added
-    fun addProduct(product: Product): String {
-        LOGGER.debug("received request to add product ${product.name}")
-        if (product.name.isBlank()) {
+    fun addProduct(customerProductDTO: CustomerProductDTO): String {
+        LOGGER.debug("received request to add product ${customerProductDTO.name}")
+        if(!checkProductQuantity(customerProductDTO.quantity))
+            return "Provide a valid quantity: >= 0"
+        if (customerProductDTO.name.isBlank()) {
             LOGGER.debug("product name must be well formed (not empty or blank)")
             return "product name must be well formed (not empty or blank)"
         }
-        val productCheck: Product? = getProductByName(product.name)
+        val productCheck: Product? = getProductByName(customerProductDTO.name)
         productCheck?.let {
-            LOGGER.debug("product ${product.name} already present into the DB")
-            return "product ${product.name} already present into the DB"
+            LOGGER.debug("product ${customerProductDTO.name} already present into the DB")
+            return "product ${customerProductDTO.name} already present into the DB"
         } ?: kotlin.run {
-            saveNewProduct(product)
-            LOGGER.debug("product ${product.name} added successfully")
-            return "product ${product.name} added successfully"
+            saveNewProduct(customerProductDTO)
+            LOGGER.debug("product ${customerProductDTO.name} added successfully")
+            return "product ${customerProductDTO.name} added successfully"
         }
+    }
+
+    // return true if is valid
+    fun checkProductQuantity(productQuantity: Int) : Boolean{
+        return productQuantity >= 0
     }
 
     @Cacheable(value = ["product"])
@@ -123,14 +130,16 @@ class ProductService(
         return productRepository.findAll()
     }
 
-//    @CacheEvict(value = ["product"], key = "#productId")
+    //    @CacheEvict(value = ["product"], key = "#productId")
     fun deleteProductById(productId: String) {
         LOGGER.debug("received request to delete product with id $productId")
         productRepository.deleteById(productId)
     }
 
     @CachePut(value = ["product"])
-    fun editProduct(productName: String, newProduct: Product): Product? {
+    fun editProduct(productName: String, newProduct: CustomerProductDTO): Product? {
+        if(!checkProductQuantity(newProduct.quantity)) // if new quantity is invalid -> return null
+            return null
         val product = getProductByName(productName)
         if (product == null) {  // if not present it doesn't create a new product. For this use addProduct
             LOGGER.debug("received request to edit a product that in not present in the DB: $productName")

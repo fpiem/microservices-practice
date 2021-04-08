@@ -3,7 +3,7 @@
 - [] un cliente dovrebbe poter ordinare solamente prodotti che sono presenti nel catalog: controllare che piazzando un ordine l'id di tutti i prodotti nel carrello sia presente nel catalog
 - [] logica per cominciare a fare l'invio dell'ordine dopo che é stato piazzato => REST calls nel catalog da un admin?
 - [] email in order controller - che admin ricevono le mail?
-- [] CustomerProductDTO, interfaccia nel catalog dovrebbe usare un DTO, al momento usa l'oggetto di modello
+- [X] CustomerProductDTO, interfaccia nel catalog dovrebbe usare un DTO, al momento usa l'oggetto di modello
     - Probabilmente il DTO puó essere un mapping 1 a 1 dal Product di modello
     - ProductMapper per fare la conversione fra i due (dovrebbe essere 1 a 1 banalmente)
 - [] customer should be able to see their own wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)

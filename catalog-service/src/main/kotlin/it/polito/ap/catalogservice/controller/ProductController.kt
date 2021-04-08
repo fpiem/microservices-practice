@@ -3,8 +3,8 @@ package it.polito.ap.catalogservice.controller
 import it.polito.ap.catalogservice.model.Product
 import it.polito.ap.catalogservice.service.ProductService
 import it.polito.ap.common.dto.CartProductDTO
+import it.polito.ap.common.dto.CustomerProductDTO
 import it.polito.ap.common.dto.OrderDTO
-import it.polito.ap.common.dto.UserDTO
 import it.polito.ap.common.utils.StatusType
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
@@ -46,13 +46,16 @@ class ProductController(val productService: ProductService) {
     }
 
     @PostMapping("")
-    fun addProduct(@RequestBody product: Product): ResponseEntity<String> {
+    fun addProduct(@RequestBody product: CustomerProductDTO): ResponseEntity<String> {
         LOGGER.info("received request to add product ${product.name}")
         return ResponseEntity.ok(productService.addProduct(product))
     }
 
     @PutMapping("/{productId}")
-    fun editProduct(@PathVariable productId: String, @RequestBody newProduct: Product): ResponseEntity<Product> {
+    fun editProduct(
+        @PathVariable productId: String,
+        @RequestBody newProduct: CustomerProductDTO
+    ): ResponseEntity<Product> {
         LOGGER.info("received request to modify product with id $productId")
         val product = productService.editProduct(productId, newProduct)
         product?.let {
