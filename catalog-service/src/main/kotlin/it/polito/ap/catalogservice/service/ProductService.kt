@@ -181,7 +181,7 @@ class ProductService(
         return updatedProduct
     }
 
-    fun placeOrder(cart: List<CartProductDTO>, shippingAddress: String, authentication: Authentication): OrderDTO? {
+    suspend fun placeOrder(cart: List<CartProductDTO>, shippingAddress: String, authentication: Authentication): OrderDTO? {
         if (cart.isEmpty())
             return null
         val userDTO = createUserDTOFromLoggedUser(authentication) ?: return null
@@ -223,7 +223,7 @@ class ProductService(
         return null
     }
 
-    fun modifyOrderStatus(orderId: ObjectId, newStatus: StatusType, authentication: Authentication): String {
+    suspend fun modifyOrderStatus(orderId: ObjectId, newStatus: StatusType, authentication: Authentication): String {
         val userDTO = createUserDTOFromLoggedUser(authentication)
         if (userDTO == null) {
             val statusString = "Cannot find user"
@@ -265,7 +265,7 @@ class ProductService(
     }
 
     // if no param the request is performed for the logger used, instead is performed just by admins
-    fun getWalletFunds(userId: String?, authentication: Authentication): String {
+    suspend fun getWalletFunds(userId: String?, authentication: Authentication): String {
         LOGGER.debug("Request to retrieve wallet funds")
         val user = retrieveLoggedUser(authentication)
         if (user == null) { // if user logged is not present in the db -> return
@@ -302,7 +302,7 @@ class ProductService(
     }
 
     // if no param the request is performed for the logged user, instead is performed just by admins
-    fun getWalletTransactions(userId: String?, authentication: Authentication): Pair<List<TransactionDTO>?, String> {
+    suspend fun getWalletTransactions(userId: String?, authentication: Authentication): Pair<List<TransactionDTO>?, String> {
         LOGGER.debug("Request to retrieve wallet transactions")
         val user = retrieveLoggedUser(authentication)
         if (user == null) {

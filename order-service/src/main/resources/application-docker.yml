@@ -1,4 +1,5 @@
 application:
+  catalog-address: http://catalog-service:8181/products
   warehouse-address: http://warehouse-service:8184/warehouses
   wallet-address: http://wallet-service:8183/wallets
   consistency-check-timeout-ms: 30000

@@ -35,8 +35,6 @@ class SecurityConfig(val customAuthenticationProvider: CustomAuthenticationProvi
             .antMatchers(HttpMethod.PUT, "/products/order/**").hasAnyRole("CUSTOMER", "ADMIN")
             .antMatchers(HttpMethod.GET, "/products/walletFunds**").hasAnyRole("CUSTOMER", "ADMIN")
             .antMatchers(HttpMethod.GET, "/products/walletTransactions**").hasAnyRole("CUSTOMER", "ADMIN")
-            .antMatchers(HttpMethod.GET, "/products/getAdminsEmail").hasRole("ADMIN")
-            .antMatchers(HttpMethod.GET, "/products/getEmail/**").hasRole("ADMIN")
             .antMatchers(HttpMethod.PUT, "/products/**").hasRole("ADMIN")
             .and()
             .csrf().disable()

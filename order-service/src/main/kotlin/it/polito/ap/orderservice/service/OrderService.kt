@@ -10,7 +10,7 @@ import it.polito.ap.orderservice.model.Delivery
 import it.polito.ap.orderservice.model.Order
 import it.polito.ap.orderservice.model.utils.CartElement
 import it.polito.ap.orderservice.repository.OrderRepository
-import it.polito.ap.orderservice.service.mapper.OrderMapper
+import it.polito.ap.orderservice.service.mapper.CartProductMapper
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
@@ -38,7 +38,7 @@ inline fun <reified T : Any> typeRef(): ParameterizedTypeReference<T> = object :
 @Service
 class OrderService(
     val orderRepository: OrderRepository,
-    val orderMapper: OrderMapper,
+    val orderMapper: CartProductMapper,
     val mongoTemplate: MongoTemplate,
     val kafkaTemplate: KafkaTemplate<String, String>,
     val emailSender: JavaMailSender
@@ -62,9 +62,8 @@ class OrderService(
     @Value("\${application.consistency-check-timeout-ms}")
     private lateinit var consistencyCheckTimeoutMillis: Number
 
-    val jacksonObjectMapper = jacksonObjectMapper()
+    private val jacksonObjectMapper = jacksonObjectMapper()
 
-    // TODO: figure out if it is possible to use suspend + delay here instead of Thread.sleep()
     @KafkaListener(groupId = "order_service", topics = ["place_order"])
     fun ensureOrderConsistency(message: String) {
         val orderId = jacksonObjectMapper.readValue<String>(message)
@@ -94,8 +93,7 @@ class OrderService(
         return order
     }
 
-    // TODO: should this function be "suspend"?
-    fun createNewOrder(orderPlacingDTO: OrderPlacingDTO): OrderDTO? {
+    suspend fun createNewOrder(orderPlacingDTO: OrderPlacingDTO): OrderDTO? {
         LOGGER.debug("Received a request to place an order for user ${orderPlacingDTO.user.userId}")
 
         val cart = orderPlacingDTO.cart.map { orderMapper.toModel(it) }
@@ -176,10 +174,15 @@ class OrderService(
         order.buyer = user.userId
         order.deliveryList = deliveryList
 
-        orderRepository.save(order)
+        saveOrder(order)
         LOGGER.debug("Placed new order ${order.orderId}")
-        // TODO far andare il mapper per Order to OrderDTO
         return OrderDTO(order.orderId.toString(), order.status)
+    }
+
+    private fun saveOrder(order: Order) {
+        LOGGER.debug("Request to save order ${order.orderId}")
+        orderRepository.save(order)
+        LOGGER.debug("Order ${order.orderId} saved successfully")
     }
 
     fun getOrderById(orderId: ObjectId): Optional<Order> {
@@ -187,7 +190,7 @@ class OrderService(
         return orderRepository.findById(orderId.toString())
     }
 
-    fun modifyOrder(orderId: ObjectId, newStatus: StatusType, user: UserDTO): ResponseEntity<String> {
+    suspend fun modifyOrderStatus(orderId: ObjectId, newStatus: StatusType, user: UserDTO): String {
         LOGGER.debug("Receiving request to modify status for order $orderId")
         // admin logic
         if (RoleType.ROLE_ADMIN == user.role) {
@@ -200,14 +203,15 @@ class OrderService(
             )
 
             updateStatus?.let {
-                LOGGER.debug("Order modified by admin! Order status: ${updateStatus.status}")
                 if (updateStatus.status == StatusType.CANCELLED || updateStatus.status == StatusType.FAILED) // rollback is needed just in these two cases
                     orderRollback(updateStatus.orderId.toString())
+                LOGGER.debug("Order modified by admin! Order status: ${updateStatus.status}")
                 sendEmail(updateStatus, user)
-                return ResponseEntity.ok("Order modified by admin! Order status: ${updateStatus.status}")
+                return "Order modified by admin"
             } ?: kotlin.run {
-                LOGGER.debug("Cannot change order status")
-                return ResponseEntity("Cannot change order status", HttpStatus.BAD_REQUEST)
+                val statusString = "Cannot change order status"
+                LOGGER.debug(statusString)
+                return statusString
             }
         }
         // customer logic
@@ -222,17 +226,18 @@ class OrderService(
         )
 
         updateStatus?.let {
-            LOGGER.debug("Order modified! Order status: ${updateStatus.status}")
             orderRollback(updateStatus.orderId.toString()) // here we know order is CANCELLED
             sendEmail(updateStatus, user)
-            return ResponseEntity.ok("Order modified! Order status: ${updateStatus.status}")
+            LOGGER.debug("Order modified! Order status: ${updateStatus.status}")
+            return "Order modified"
         } ?: kotlin.run {
-            LOGGER.debug("Unauthorized request to modify order status")
-            return ResponseEntity("Unauthorized request", HttpStatus.UNAUTHORIZED)
+            val statusString = "Unauthorized request to modify order status"
+            LOGGER.debug(statusString)
+            return statusString
         }
     }
 
-    private fun sendEmail(order: Order, user: UserDTO) {
+    private suspend fun sendEmail(order: Order, user: UserDTO) {
         val message = SimpleMailMessage()
         message.setSubject("Change status for order ${order.orderId}")
         message.setText(
@@ -241,39 +246,36 @@ class OrderService(
             """.trimIndent()
         )
 
-        // if a customer change his/her status, email sent to him/her and admins
         val emails = getAdminsEmail()
         if (emails == null) {
             LOGGER.debug("Cannot retrieve admins email")
-            return // stop email sending
+            return
         }
 
         val customerEmail = order.buyer?.let { getEmailById(it) }
         if (customerEmail == null) {
             LOGGER.debug("Cannot retrieve customer email")
-            return // stop email sending
+            return
         }
-        if (!emails.contains(customerEmail)) // if admin change his/her order we need this chech
+        if (!emails.contains(customerEmail))
             emails.add(customerEmail)
 
-        // if status changed by admin, he/her receive the email too
         if (user.role == RoleType.ROLE_ADMIN) {
-            // retrieve admin email
             val adminEmail = getEmailById(user.userId)
             if (adminEmail == null) {
                 LOGGER.debug("Cannot retrieve admin email")
-                return // stop email sending
+                return
             }
-            // adminEmail is added just if it's not already present in emails (it could be retrieved by getAdminsEmail)
             if (!emails.contains(adminEmail))
                 emails.add(adminEmail)
         }
 
         message.setTo(*emails.toTypedArray())
         emailSender.send(message)
+        LOGGER.debug("Emails sent")
     }
 
-    private fun getAdminsEmail(): ArrayList<String>? {
+    private suspend fun getAdminsEmail(): ArrayList<String>? {
         LOGGER.debug("Request to retrieve admins email")
         return try {
             restTemplate.exchange(
@@ -291,7 +293,7 @@ class OrderService(
         }
     }
 
-    private fun getEmailById(userId: String): String? {
+    private suspend fun getEmailById(userId: String): String? {
         LOGGER.debug("Request to retrieve email for $userId")
         return try {
             restTemplate.exchange(

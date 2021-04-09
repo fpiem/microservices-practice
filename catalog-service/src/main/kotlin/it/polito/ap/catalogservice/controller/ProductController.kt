@@ -75,7 +75,7 @@ class ProductController(val productService: ProductService) {
     }
 
     @PostMapping("/placeOrder")
-    fun placeOrder(
+    suspend fun placeOrder(
         @RequestBody cart: List<CartProductDTO>,
         authentication: Authentication,
         @RequestParam shippingAddress: String
@@ -92,7 +92,7 @@ class ProductController(val productService: ProductService) {
     }
 
     @PutMapping("/order/{orderId}")
-    fun changeStatus(
+    suspend fun changeStatus(
         @PathVariable orderId: ObjectId,
         @RequestParam newStatus: StatusType,
         authentication: Authentication
@@ -123,7 +123,7 @@ class ProductController(val productService: ProductService) {
 
     // if no param the request is performed for the logger used, instead is performed just by admins
     @GetMapping("/walletFunds")
-    fun getWalletFunds(
+    suspend fun getWalletFunds(
         @RequestParam(required = false) userId: String?,
         authentication: Authentication
     ): ResponseEntity<Double> {
@@ -153,7 +153,7 @@ class ProductController(val productService: ProductService) {
 
     // if no param the request is performed for the logger used, instead is performed just by admins
     @GetMapping("/walletTransactions")
-    fun getWalletTransactions(
+    suspend fun getWalletTransactions(
         @RequestParam(required = false) userId: String?,
         authentication: Authentication
     ): ResponseEntity<List<TransactionDTO>> {

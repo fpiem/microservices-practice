@@ -10,7 +10,7 @@ import org.springframework.stereotype.Service
 @Service
 class UserService(val userRepository: UserRepository) {
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(UserService::class.java)
     }
 
     fun getUserByEmail(email: String): User? {
