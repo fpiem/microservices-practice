@@ -1,6 +1,7 @@
 application:
   order-address: http://localhost:8182/orders
   wallet-address: http://localhost:8183/wallets
+
 spring:
   application:
     name: catalog-service

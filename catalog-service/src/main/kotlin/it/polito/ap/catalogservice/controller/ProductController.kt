@@ -13,7 +13,6 @@ import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.core.Authentication
 import org.springframework.web.bind.annotation.*
-import org.springframework.web.client.RestTemplate
 
 @RestController
 @RequestMapping("/products")
@@ -25,22 +24,22 @@ class ProductController(val productService: ProductService) {
 
     @GetMapping("")
     fun getAll(): ResponseEntity<List<Product>> {
-        LOGGER.info("received request to retrieve all the product")
+        LOGGER.info("Received request to retrieve all the product")
         val products = productService.getAll()
         if (products.isEmpty()) {
-            LOGGER.info("found no product")
+            LOGGER.info("Found no product")
             return ResponseEntity(null, HttpStatus.NOT_FOUND)
         }
-        LOGGER.info("found ${products.size} products")
+        LOGGER.info("Found ${products.size} products")
         return ResponseEntity.ok(products)
     }
 
     @GetMapping("/{productName}")
     fun getProductByName(@PathVariable productName: String): ResponseEntity<Product> {
-        LOGGER.info("received request for $productName")
+        LOGGER.info("Received request for $productName")
         val product = productService.getProductByName(productName)
         product?.let {
-            LOGGER.info("found product $productName")
+            LOGGER.info("Found product $productName")
             return ResponseEntity.ok(product)
         }
         return ResponseEntity.badRequest().body(null)
@@ -48,7 +47,7 @@ class ProductController(val productService: ProductService) {
 
     @PostMapping("")
     fun addProduct(@RequestBody product: CustomerProductDTO): ResponseEntity<String> {
-        LOGGER.info("received request to add product ${product.name}")
+        LOGGER.info("Received request to add product ${product.name}")
         return ResponseEntity.ok(productService.addProduct(product))
     }
 
@@ -57,20 +56,20 @@ class ProductController(val productService: ProductService) {
         @PathVariable productId: String,
         @RequestBody newProduct: CustomerProductDTO
     ): ResponseEntity<Product> {
-        LOGGER.info("received request to modify product with id $productId")
+        LOGGER.info("Received request to modify product with id $productId")
         val product = productService.editProduct(productId, newProduct)
         product?.let {
-            LOGGER.info("modification on $productId worked")
+            LOGGER.info("Modification on $productId worked")
             return ResponseEntity.ok(product)
         } ?: kotlin.run {
-            LOGGER.info("modification on $productId failed")
+            LOGGER.info("Modification on $productId failed")
             return ResponseEntity.badRequest().body(null)
         }
     }
 
     @DeleteMapping("/{productId}")
     fun deleteProductById(@PathVariable productId: String): ResponseEntity<String> {
-        LOGGER.info("received request to delete the product with id $productId")
+        LOGGER.info("Received request to delete the product with id $productId")
         productService.deleteProductById(productId)
         return ResponseEntity.ok("Deletion of product with id $productId completed")
     }
@@ -81,13 +80,13 @@ class ProductController(val productService: ProductService) {
         authentication: Authentication,
         @RequestParam shippingAddress: String
     ): ResponseEntity<OrderDTO> {
-        LOGGER.info("received request to place a order")
+        LOGGER.info("Received request to place a order")
         val order = productService.placeOrder(cart, shippingAddress, authentication)
         order?.let {
-            LOGGER.info("order placed with ID: ${order.orderId}")
+            LOGGER.info("Order placed with ID: ${order.orderId}")
             return ResponseEntity.ok(order)
         } ?: kotlin.run {
-            LOGGER.info("cannot place order")
+            LOGGER.info("Cannot place order")
             return ResponseEntity.badRequest().body(null)
         }
     }
@@ -98,8 +97,28 @@ class ProductController(val productService: ProductService) {
         @RequestParam newStatus: StatusType,
         authentication: Authentication
     ): ResponseEntity<String> {
-        LOGGER.info("received request to modify order status")
-        return productService.modifyOrder(orderId, newStatus, authentication)
+        LOGGER.info("Received request to modify order status")
+        when (val message = productService.modifyOrderStatus(orderId, newStatus, authentication)) {
+            "Cannot find user" -> {
+                val statusString = "Cannot find user ${authentication.principal}"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "Cannot change order status: HttpServerErrorException" -> {
+                val statusString = "Cannot change order status: HttpServerErrorException"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.INTERNAL_SERVER_ERROR)
+            }
+            "Cannot change order status: HttpClientErrorException" -> {
+                val statusString = "Cannot change order status: HttpClientErrorException"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            else -> {
+                LOGGER.info(message)
+                return ResponseEntity(message, HttpStatus.OK)
+            }
+        }
     }
 
     // if no param the request is performed for the logger used, instead is performed just by admins
@@ -108,8 +127,28 @@ class ProductController(val productService: ProductService) {
         @RequestParam(required = false) userId: String?,
         authentication: Authentication
     ): ResponseEntity<Double> {
-        LOGGER.info("received request to retrieve wallet funds")
-        return productService.getWalletFunds(userId, authentication)
+        LOGGER.info("Received request to retrieve wallet funds")
+        when (val returnValue = productService.getWalletFunds(userId, authentication)) {
+            "Cannot find user in the database" -> {
+                LOGGER.info(returnValue)
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            }
+            "Cannot retrieve user wallet funds: HttpClientErrorException" -> {
+                LOGGER.info(returnValue)
+                return ResponseEntity(null, HttpStatus.BAD_REQUEST)
+            }
+            "Cannot retrieve user wallet funds: HttpServerErrorException" -> {
+                LOGGER.info(returnValue)
+                return ResponseEntity(null, HttpStatus.INTERNAL_SERVER_ERROR)
+            }
+            "Unauthorized request to retrieve wallet funds" -> {
+                LOGGER.info(returnValue)
+                return ResponseEntity(null, HttpStatus.UNAUTHORIZED)
+            }
+            else -> {
+                return ResponseEntity(returnValue.toDouble(), HttpStatus.OK)
+            }
+        }
     }
 
     // if no param the request is performed for the logger used, instead is performed just by admins
@@ -118,30 +157,46 @@ class ProductController(val productService: ProductService) {
         @RequestParam(required = false) userId: String?,
         authentication: Authentication
     ): ResponseEntity<List<TransactionDTO>> {
-        LOGGER.info("received request to retrieve wallet funds")
-        return productService.getWalletTransactions(userId, authentication)
+        LOGGER.info("Received request to retrieve wallet funds")
+        val returnValue = productService.getWalletTransactions(userId, authentication)
+        when (returnValue.second) {
+            "Cannot find user in the database" -> {
+                LOGGER.info(returnValue.second)
+                return ResponseEntity(returnValue.first, HttpStatus.BAD_REQUEST)
+            }
+            "Unauthorized request to retrieve wallet transactions" -> {
+                LOGGER.info(returnValue.second)
+                return ResponseEntity(returnValue.first, HttpStatus.UNAUTHORIZED)
+            }
+            "Cannot retrieve user wallet transactions: HttpServerErrorException" -> {
+                LOGGER.info(returnValue.second)
+                return ResponseEntity(returnValue.first, HttpStatus.INTERNAL_SERVER_ERROR)
+            }
+            "Cannot retrieve user wallet transactions: HttpClientErrorException" -> {
+                LOGGER.info(returnValue.second)
+                return ResponseEntity(returnValue.first, HttpStatus.BAD_REQUEST)
+            }
+            "OK" -> {
+                LOGGER.info(returnValue.second)
+                return ResponseEntity(returnValue.first, HttpStatus.OK)
+            }
+            else -> {
+                LOGGER.error(returnValue.second)
+                return ResponseEntity(returnValue.first, HttpStatus.BAD_REQUEST)
+            }
+        }
     }
 
     @GetMapping("/getAdminsEmail")
     fun getAdminsEmail(): ArrayList<String>? {
-        LOGGER.info("received request to retrieve admins email")
+        LOGGER.info("Received request to retrieve admins email")
         return productService.getAdminsEmail()
     }
 
     @GetMapping("/getEmail/{userId}")
     fun getEmailById(@PathVariable userId: ObjectId): String? {
-        LOGGER.info("received request to retrieve email for user $userId")
+        LOGGER.info("Received request to retrieve email for user $userId")
         return productService.getEmailById(userId)
     }
-
     // TODO cancellare funzioni di test
-    @GetMapping("/test")
-    fun test(): ResponseEntity<String> {
-        LOGGER.info("test communication")
-        val restTemplate = RestTemplate()
-        val res = restTemplate.getForObject("http://localhost:8082/orders/test", String::class.java)
-        return ResponseEntity.ok(res.toString())
-    }
-
-    // TODO creare AdminController e inserire API per modificare il warehouse (load/unload product)
 }

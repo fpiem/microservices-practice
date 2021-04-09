@@ -1,5 +1,6 @@
 application:
   order-address: http://order-service:8182/orders
+  wallet-address: http://wallet-service:8183/wallets
 
 logging:
   level:

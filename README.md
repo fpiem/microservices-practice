@@ -1,3 +1,9 @@
+### Useful links
+https://www.overleaf.com/project/60702650f977ba657f126342
+
+### Docker deployment
+docker-compose -p ecommerce -f .\docker-compose.yml up -d --remove-orphans
+
 ### TODO List
 
 - [X] un cliente dovrebbe poter ordinare solamente prodotti che sono presenti nel catalog: controllare che piazzando un ordine l'id di tutti i prodotti nel carrello sia presente nel catalog
@@ -9,7 +15,7 @@
 - [X] customer should be able to see their own wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
 - [X] admins should be able to see anyone's wallet funds and transaction list from the catalog service (i diritti dovrebbero essere controllati nel catalog)
 - [X] fix snake case in application.yml files
-- [] how to deploy the whole thing? docker-compose? - DA FARE
+- [X] how to deploy the whole thing? docker-compose? - DA FARE
 - [X] userId should be an ObjectId, separate from email
 - [X] users should be able to cancel their own order
 - [X] alarms and emails - requires adding an admin to the warehouse
@@ -47,3 +53,4 @@
 - Da catalog-service a wallet-service: senza paramentro vengono retrieved le info dell'utente loggato, altrimenti viene eseguito codice riservato agli admin (con il paramentro si indica di quale utente vogliamo le info)
 - quando viene modificato lo stato di un ordine la mail viene inviata a: il buyer, 3 admin (random policy) e all'admin che modifica lo status se è lui a modificarlo (se è già presente tra gli admin selezionati dalla policy allora riceve una sola mail e non due)
 - Eseguire OrderStatusRoutine.kt per simulare stato avanzamento ordine
+- In catalog-service, le funzioni getAdminsEmail() e getEmailById() solo utilizzabili solo dagli admin ma in realtà non dovrebbero essere visibili all'esterno (solo da order-service)

@@ -3,7 +3,6 @@ package it.polito.ap.catalogservice.model
 import it.polito.ap.common.utils.CategoryType
 import org.springframework.data.annotation.Id
 import org.springframework.data.mongodb.core.mapping.Document
-import java.lang.IllegalArgumentException
 
 @Document
 class Product(

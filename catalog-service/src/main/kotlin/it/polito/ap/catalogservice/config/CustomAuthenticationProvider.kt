@@ -12,10 +12,10 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Component
 
 @Component
-class CustomAuthenticationProvider (val userRepository: UserRepository): AuthenticationProvider {
+class CustomAuthenticationProvider(val userRepository: UserRepository) : AuthenticationProvider {
 
     companion object {
-        private val LOGGER = LoggerFactory.getLogger(javaClass)
+        private val LOGGER = LoggerFactory.getLogger(CustomAuthenticationProvider::class.java)
     }
 
     @Autowired
@@ -23,14 +23,20 @@ class CustomAuthenticationProvider (val userRepository: UserRepository): Authent
 
     @Throws(AuthenticationException::class)
     override fun authenticate(authentication: Authentication): Authentication? {
-        LOGGER.info("authentication user ${authentication.name},${authentication.credentials} -> ${encoder.encode(authentication.credentials.toString())}")
+        LOGGER.info(
+            "Authentication user ${authentication.name},${authentication.credentials} -> ${
+                encoder.encode(
+                    authentication.credentials.toString()
+                )
+            }"
+        )
         val user = userRepository.findByEmailAndPassword(authentication.name, authentication.credentials.toString())
         user?.let {
             val authorities = setOf(SimpleGrantedAuthority(user.role.toString()))
-            LOGGER.info("found user ${user.name}, ${user.surname}, $authorities")
+            LOGGER.info("Found user ${user.name}, ${user.surname}, $authorities")
             return UsernamePasswordAuthenticationToken(user, authentication.name, authorities)
         } ?: kotlin.run {
-            LOGGER.info("user not found into the DB")
+            LOGGER.info("User not found into the DB")
             return null
         }
     }
