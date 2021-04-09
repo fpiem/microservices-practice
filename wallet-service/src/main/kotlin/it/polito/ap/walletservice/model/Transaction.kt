@@ -9,7 +9,6 @@ class Transaction(
     var transactionMotivation: TransactionMotivation
 ) {
     init {
-        // ObjectId() employed to generate a unique transaction identifier
         val transactionId = ObjectId().toString()
         val transactionTimestamp = System.currentTimeMillis()
     }

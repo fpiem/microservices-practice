@@ -4,11 +4,9 @@ import com.fasterxml.jackson.module.kotlin.jacksonObjectMapper
 import com.fasterxml.jackson.module.kotlin.readValue
 import it.polito.ap.common.dto.TransactionDTO
 import it.polito.ap.common.utils.TransactionMotivation
-import it.polito.ap.walletservice.model.Transaction
 import it.polito.ap.walletservice.model.Wallet
 import it.polito.ap.walletservice.repository.WalletRepository
 import it.polito.ap.walletservice.service.mapper.WalletMapper
-import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
 import org.springframework.data.mongodb.core.FindAndModifyOptions
 import org.springframework.data.mongodb.core.MongoTemplate
@@ -16,22 +14,20 @@ import org.springframework.data.mongodb.core.query.Criteria
 import org.springframework.data.mongodb.core.query.Query
 import org.springframework.data.mongodb.core.query.Update
 import org.springframework.kafka.annotation.KafkaListener
-import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Service
 
 @Service
 class WalletService(
     val walletRepository: WalletRepository,
     val mapper: WalletMapper,
-    val mongoTemplate: MongoTemplate,
-    val kafkaTemplate: KafkaTemplate<String, String>
+    val mongoTemplate: MongoTemplate
 ) {
 
     companion object {
         private val LOGGER = LoggerFactory.getLogger(WalletService::class.java)
     }
 
-    val jacksonObjectMapper = jacksonObjectMapper()
+    private val jacksonObjectMapper = jacksonObjectMapper()
 
     @KafkaListener(groupId = "wallet_service", topics = ["rollback"])
     fun rollbackListener(message: String) {
@@ -81,7 +77,6 @@ class WalletService(
         return wallet?.transactionList?.map { mapper.toDTO(it) }
     }
 
-    // TODO: if transaction.amount is positive, currently we just add money, is it correct?
     fun addTransaction(userId: String, transactionDTO: TransactionDTO): Double? {
         LOGGER.debug("Received request to add a transaction to the wallet of user $userId")
         val transaction = mapper.toModel(transactionDTO)
@@ -108,5 +103,4 @@ class WalletService(
         }
         return wallet?.funds
     }
-
 }

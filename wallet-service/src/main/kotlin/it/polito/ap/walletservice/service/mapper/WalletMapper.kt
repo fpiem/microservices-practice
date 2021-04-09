@@ -6,8 +6,6 @@ import org.mapstruct.Mapper
 
 @Mapper(componentModel = "spring")
 interface WalletMapper {
-
     fun toModel(transactionDTO: TransactionDTO): Transaction
     fun toDTO(transaction: Transaction): TransactionDTO
-
 }
