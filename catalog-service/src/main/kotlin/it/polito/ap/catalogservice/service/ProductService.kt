@@ -223,7 +223,6 @@ class ProductService(
         return null
     }
 
-    // TODO verificare che i controlli vadano fatti solo nell'order-service oppure anche qui
     fun modifyOrderStatus(orderId: ObjectId, newStatus: StatusType, authentication: Authentication): String {
         val userDTO = createUserDTOFromLoggedUser(authentication)
         if (userDTO == null) {

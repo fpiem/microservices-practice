@@ -198,5 +198,4 @@ class ProductController(val productService: ProductService) {
         LOGGER.info("Received request to retrieve email for user $userId")
         return productService.getEmailById(userId)
     }
-    // TODO cancellare funzioni di test
 }
