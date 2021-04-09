@@ -6,7 +6,6 @@ import it.polito.ap.common.dto.CartProductDTO
 import it.polito.ap.common.dto.DeliveryDTO
 import it.polito.ap.common.dto.ProductDTO
 import it.polito.ap.common.dto.WarehouseProductDTO
-import it.polito.ap.warehouseservice.controller.WarehouseController
 import it.polito.ap.warehouseservice.model.Warehouse
 import it.polito.ap.warehouseservice.model.WarehouseProduct
 import it.polito.ap.warehouseservice.model.WarehouseTransaction
@@ -26,9 +25,6 @@ import org.springframework.mail.SimpleMailMessage
 import org.springframework.mail.javamail.JavaMailSender
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import org.springframework.transaction.annotation.Isolation
-import org.springframework.transaction.annotation.Transactional
-import javax.mail.internet.InternetAddress
 
 
 @Service
@@ -321,9 +317,11 @@ class WarehouseService(
         // product to drop below zero.
         val warehouse = getWarehouseByWarehouseId(warehouseId)!!
 
+        val orderItemsRemaining = orderItems.filter { it.value > 0 }
         val deliveryProducts = mutableListOf<CartProductDTO>()
-        val relevantInventory = warehouse.inventory.filter { it.productId in orderItems }
+        val relevantInventory = warehouse.inventory.filter { it.productId in orderItemsRemaining }
         for (warehouseProduct in relevantInventory) {
+
             LOGGER.debug("Picking up product ${warehouseProduct.productId} from warehouse $warehouseId")
 
             val productId = warehouseProduct.productId
@@ -360,6 +358,8 @@ class WarehouseService(
             } ?: kotlin.run {
                 LOGGER.debug("Failed to pick up product $productId from warehouse $warehouseId")
             }
+
+
         }
         if (deliveryProducts.isEmpty()) {
             LOGGER.debug("No products could be picked up from warehouse $warehouseId")

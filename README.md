@@ -54,3 +54,4 @@ docker-compose -p ecommerce -f .\docker-compose.yml up -d --remove-orphans
 - quando viene modificato lo stato di un ordine la mail viene inviata a: il buyer, 3 admin (random policy) e all'admin che modifica lo status se è lui a modificarlo (se è già presente tra gli admin selezionati dalla policy allora riceve una sola mail e non due)
 - Eseguire OrderStatusRoutine.kt per simulare stato avanzamento ordine
 - In catalog-service, le funzioni getAdminsEmail() e getEmailById() solo utilizzabili solo dagli admin ma in realtà non dovrebbero essere visibili all'esterno (solo da order-service)
+- abbiamo controllato common e va bene quel che c'è dentro 
