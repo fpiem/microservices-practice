@@ -38,7 +38,7 @@ class WarehouseServiceApplication(
                 WarehouseProduct("prod5", 10, 4)
             ),
             mutableListOf(),
-            listOf("ciccinopasticcino@yopmail.com")
+            listOf("general_admin@yopmail.com")
         )
         warehouseRepository.saveAll(listOf(warehouse1, warehouse2))
 

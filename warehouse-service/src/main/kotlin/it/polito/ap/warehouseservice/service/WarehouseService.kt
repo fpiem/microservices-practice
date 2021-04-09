@@ -44,7 +44,7 @@ class WarehouseService(
         private val LOGGER = LoggerFactory.getLogger(WarehouseService::class.java)
     }
 
-    val jacksonObjectMapper = jacksonObjectMapper()
+    private val jacksonObjectMapper = jacksonObjectMapper()
 
     @KafkaListener(groupId = "warehouse_service", topics = ["rollback"])
     fun rollbackListener(message: String) {
@@ -116,7 +116,7 @@ class WarehouseService(
                     .and("inventory").elemMatch(
                         Criteria.where("productId").`is`(transaction.productId)
                     )
-                )
+            )
             val rollbackTransaction = WarehouseTransaction(
                 transaction.orderId,
                 transaction.productId,
@@ -248,9 +248,11 @@ class WarehouseService(
         // Assumes warehouse exists and product is not found
         LOGGER.debug("Adding product ${warehouseProduct.productId} to warehouse $warehouseId")
 
-        // TODO: add criteria that product does not exist
         // In case product was added after the "product already exists" check
-        val query = Query().addCriteria(Criteria.where("warehouseId").`is`(warehouseId))
+        val query = Query().addCriteria(
+            Criteria.where("warehouseId").`is`(warehouseId)
+                .and("inventory.productId").nin(listOf(warehouseProduct.productId))
+        )
 
         val transaction = WarehouseTransaction(
             null,
@@ -274,7 +276,6 @@ class WarehouseService(
         }
     }
 
-    // TODO: check if using a negative quantity transaction is indeed negative in quantity in the DB
     fun editProduct(warehouseId: String, warehouseProductDTO: WarehouseProductDTO): String {
         LOGGER.debug("Received request to edit product ${warehouseProductDTO.productId} alarm in $warehouseId")
         val warehouseProduct = mapper.toModel(warehouseProductDTO)
@@ -376,8 +377,6 @@ class WarehouseService(
             val mostRequestedProductId = orderItems.maxByOrNull { it.value }!!.key
             val selectedWarehouseId = selectWarehouse(mostRequestedProductId)
             if (selectedWarehouseId == null) {
-                // TODO check what happens with 0 quantity
-                // TODO: implement rollback
                 LOGGER.debug("Rolling back - Failed to create delivery list for order $orderId")
                 // Note: in case of physical failure, a Kafka rollback message will be sent by the order message
                 // => Even in this case no transaction information is lost

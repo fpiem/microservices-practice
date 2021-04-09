@@ -15,10 +15,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/warehouses")
 class WarehouseController(
-    val warehouseService: WarehouseService,
-    var mapper: WarehouseMapper,
-    val emailSender: JavaMailSender,
-    val warehouseRepository: WarehouseRepository
+    val warehouseService: WarehouseService
 ) {
 
     companion object {
@@ -54,13 +51,14 @@ class WarehouseController(
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
             "product added" -> {
-                val statusString = "Product ${warehouseProductDTO.productId} successfully added to warehouse $warehouseId"
+                val statusString =
+                    "Product ${warehouseProductDTO.productId} successfully added to warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity.ok(statusString)
             }
             else -> {
                 val statusString = "Could not add product - generic error"
-                LOGGER.info(statusString)
+                LOGGER.error(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
         }
@@ -68,7 +66,6 @@ class WarehouseController(
 
     @GetMapping("/{warehouseId}")
     fun warehouseInventory(@PathVariable warehouseId: String): ResponseEntity<List<WarehouseProductDTO>> {
-        // TODO: should something other than null be returned in case warehouse is not found?
         LOGGER.info("Received request for the inventory of warehouse $warehouseId")
         val inventory = warehouseService.warehouseInventory(warehouseId)
         inventory?.let {
@@ -108,18 +105,19 @@ class WarehouseController(
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
             "insufficient quantity" -> {
-                val statusString = "Insufficient quantity of product ${warehouseProductDTO.productId} in warehouse $warehouseId"
+                val statusString =
+                    "Insufficient quantity of product ${warehouseProductDTO.productId} in warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
-            "warehouse not found" -> {  // Warehouse not found
+            "warehouse not found" -> {
                 val statusString = "Could not find warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
-            else -> {  // Warehouse not found
+            else -> {
                 val statusString = "Could not update - general error"
-                LOGGER.info(statusString)
+                LOGGER.error(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
         }
@@ -148,13 +146,14 @@ class WarehouseController(
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
             "alarm updated" -> {  // Success
-                val statusString = "Updated alarm threshold for product ${warehouseProductDTO.productId} in warehouse $warehouseId"
+                val statusString =
+                    "Updated alarm threshold for product ${warehouseProductDTO.productId} in warehouse $warehouseId"
                 LOGGER.info(statusString)
                 return ResponseEntity.ok(statusString)
             }
             else -> {
                 val statusString = "Could not update - general error"
-                LOGGER.info(statusString)
+                LOGGER.error(statusString)
                 return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
             }
         }
@@ -174,51 +173,4 @@ class WarehouseController(
             return ResponseEntity(null, HttpStatus.BAD_REQUEST)
         }
     }
-
-    @PostMapping("/mail/{body}")
-    fun mailTest(@PathVariable body: String) {
-        val message = SimpleMailMessage()
-        message.setSubject("warehouse test")
-        message.setText(body)
-        val test = listOf<String>("piem@yopmail.com", "ciccinopasticcino@yopmail.com")
-        message.setTo(*test.toTypedArray())
-        emailSender.send(message)
-    }
-
-    @GetMapping("/test")
-    fun test() {
-        var warehouse = warehouseService.getWarehouseByWarehouseId("111111111111111111111111")
-        warehouse!!.inventory.forEach {
-            println("${it.productId} - ${it.quantity}")
-        }
-        editProduct(
-            "111111111111111111111111",
-            WarehouseProductDTO("prod1", 1000, 10)
-        )
-        warehouse = warehouseService.getWarehouseByWarehouseId("111111111111111111111111")
-        warehouse!!.inventory.forEach {
-            println("${it.productId} - ${it.quantity}")
-        }
-        Thread.sleep(11000)
-        warehouse = warehouseService.getWarehouseByWarehouseId("111111111111111111111111")
-        warehouse!!.inventory.forEach {
-            println("${it.productId} - ${it.quantity}")
-        }
-    }
-
-    @GetMapping("/test1")
-    fun test1() {
-        var warehouseId = warehouseService.selectWarehouse("prod2")
-        println(warehouseId)
-        editProduct(
-            "111111111111111111111111",
-            WarehouseProductDTO("prod2", -8, 1)
-        )
-        warehouseId = warehouseService.selectWarehouse("prod2")
-        println(warehouseId)
-        Thread.sleep(11000)
-        warehouseId = warehouseService.selectWarehouse("prod2")
-        println(warehouseId)
-    }
-
 }
