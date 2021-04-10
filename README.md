@@ -1,7 +1,10 @@
 ### Useful links
 https://www.overleaf.com/project/60702650f977ba657f126342
 
-### Docker deployment
+### Docker
+## Build JAR
+docker-compose -f .\docker-compose-build.yml up --remove-orphans
+## Deploy microservices
 docker-compose -p ecommerce -f .\docker-compose.yml up -d --remove-orphans
 
 ### TODO List
