@@ -175,6 +175,7 @@ class OrderService(
         order.deliveryList = deliveryList
 
         saveOrder(order)
+        sendEmail(order, user)
         LOGGER.debug("Placed new order ${order.orderId}")
         return OrderDTO(order.orderId.toString(), order.status)
     }
