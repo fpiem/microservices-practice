@@ -10,7 +10,7 @@ import org.bson.types.ObjectId
 import org.springframework.beans.factory.getBean
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
-import org.springframework.security.crypto.password.PasswordEncoder
+
 
 @SpringBootApplication
 class CatalogServiceApplication(
@@ -60,15 +60,14 @@ fun main(args: Array<String>) {
     val context = runApplication<CatalogServiceApplication>(*args)
 
     val userRepository = context.getBean<UserRepository>("userRepository")
-    val encoder = context.getBean<PasswordEncoder>("encoder")
 
     val user0 = User(
-        ObjectId("333333333333333333333333"), "m.michelini@yopmail.com", encoder.encode("password"),
+        ObjectId("333333333333333333333333"), "m.michelini@yopmail.com", "password",
         "Mattia", "Michelini", "via terzi"
     )
 
     val user1 = User(
-        ObjectId("444444444444444444444444"), "m.rossini@yopmail.com", encoder.encode("password"),
+        ObjectId("444444444444444444444444"), "m.rossini@yopmail.com", "password",
         "Marco", "Rossini", "via vivo al mare"
     )
     user1.role = RoleType.ROLE_ADMIN
