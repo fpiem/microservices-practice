@@ -35,16 +35,19 @@ class OrderController(
         }
     }
 
-    @GetMapping("/{orderId}/status")
+    @PostMapping("/{orderId}/status")
     fun orderStatus(@PathVariable orderId: ObjectId, @RequestBody user: UserDTO): ResponseEntity<String> {
         LOGGER.info("Received request for the status of $orderId by ${user.userId} with role: ${user.role}!")
-        val order = orderService.getOrderById(orderId)
-        if (order.isPresent) {
-            LOGGER.info("Found order for id $orderId")
-            return ResponseEntity.ok("Order status: ${order.get().status}")
+        return when (val message = orderService.getOrderStatus(orderId, user)) {
+            "Unauthorized user! Unable to get order status for $orderId" -> {
+                LOGGER.info(message)
+                ResponseEntity(message, HttpStatus.UNAUTHORIZED)
+            }
+            else -> {
+                LOGGER.info(message)
+                ResponseEntity(message, HttpStatus.OK)
+            }
         }
-        LOGGER.info("No order found with id $orderId")
-        return ResponseEntity.badRequest().body("No order found with the requested Id")
     }
 
     @PutMapping("/{orderId}")

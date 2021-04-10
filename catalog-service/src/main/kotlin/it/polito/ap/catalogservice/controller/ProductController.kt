@@ -91,6 +91,35 @@ class ProductController(val productService: ProductService) {
         }
     }
 
+    @GetMapping("/orderStatus/{orderId}")
+    suspend fun getOrderStatus(
+        @PathVariable orderId: ObjectId,
+        authentication: Authentication
+    ): ResponseEntity<String> {
+        LOGGER.info("Received request to get order status for order $orderId")
+        when (val message = productService.getOrderStatus(orderId, authentication)) {
+            "Cannot find user" -> {
+                val statusString = "Cannot find user ${authentication.principal}"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            "Cannot get order status: HttpServerErrorException" -> {
+                val statusString = "Cannot get order status: HttpServerErrorException"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.INTERNAL_SERVER_ERROR)
+            }
+            "Cannot get order status: HttpClientErrorException" -> {
+                val statusString = "Cannot get order status: HttpClientErrorException"
+                LOGGER.info(statusString)
+                return ResponseEntity(statusString, HttpStatus.BAD_REQUEST)
+            }
+            else -> {
+                LOGGER.info(message)
+                return ResponseEntity(message, HttpStatus.OK)
+            }
+        }
+    }
+
     @PutMapping("/order/{orderId}")
     suspend fun changeStatus(
         @PathVariable orderId: ObjectId,

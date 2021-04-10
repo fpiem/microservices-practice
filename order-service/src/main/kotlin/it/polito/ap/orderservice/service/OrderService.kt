@@ -185,9 +185,16 @@ class OrderService(
         LOGGER.debug("Order ${order.orderId} saved successfully")
     }
 
-    fun getOrderById(orderId: ObjectId): Optional<Order> {
-        LOGGER.debug("Getting order with id: $orderId")
-        return orderRepository.findById(orderId.toString())
+    fun getOrderStatus(orderId: ObjectId, user: UserDTO): String {
+        LOGGER.debug("Request to get order status for order $orderId")
+        val order = orderRepository.findById(orderId.toString())
+        if (order.get().buyer == user.userId || user.role == RoleType.ROLE_ADMIN) {
+            LOGGER.debug("Getting order status for order $orderId")
+            return orderRepository.findById(orderId.toString()).get().status.toString()
+        }
+        val statusString = "Unauthorized user! Unable to get order status for $orderId"
+        LOGGER.debug(statusString)
+        return statusString
     }
 
     suspend fun modifyOrderStatus(orderId: ObjectId, newStatus: StatusType, user: UserDTO): String {

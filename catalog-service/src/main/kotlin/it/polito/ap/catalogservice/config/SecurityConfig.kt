@@ -33,6 +33,7 @@ class SecurityConfig(val customAuthenticationProvider: CustomAuthenticationProvi
             .antMatchers(HttpMethod.DELETE, "/products/**").hasRole("ADMIN")
             .antMatchers(HttpMethod.POST, "/products/placeOrder").hasAnyRole("CUSTOMER", "ADMIN")
             .antMatchers(HttpMethod.PUT, "/products/order/**").hasAnyRole("CUSTOMER", "ADMIN")
+            .antMatchers(HttpMethod.GET, "/products/orderStatus/**").hasAnyRole("CUSTOMER", "ADMIN")
             .antMatchers(HttpMethod.GET, "/products/walletFunds**").hasAnyRole("CUSTOMER", "ADMIN")
             .antMatchers(HttpMethod.GET, "/products/walletTransactions**").hasAnyRole("CUSTOMER", "ADMIN")
             .antMatchers(HttpMethod.PUT, "/products/**").hasRole("ADMIN")

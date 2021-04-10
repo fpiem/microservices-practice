@@ -223,6 +223,32 @@ class ProductService(
         return null
     }
 
+    suspend fun getOrderStatus(orderId: ObjectId, authentication: Authentication): String {
+        val userDTO = createUserDTOFromLoggedUser(authentication)
+        if (userDTO == null) {
+            val statusString = "Cannot find user"
+            LOGGER.debug(statusString)
+            return statusString
+        }
+
+        headers.contentType = MediaType.APPLICATION_JSON
+        val requestEntity = HttpEntity<UserDTO>(userDTO, headers)
+        return try {
+            restTemplate.exchange(
+                "$orderServiceAddress/$orderId/status",
+                HttpMethod.POST,
+                requestEntity,
+                String::class.java
+            ).body!!
+        } catch (e: HttpServerErrorException) {
+            LOGGER.debug("Cannot get order status: ${e.message}")
+            "Cannot get order status: HttpServerErrorException"
+        } catch (e: HttpClientErrorException) {
+            LOGGER.debug("Cannot get order status: ${e.message}")
+            "Cannot get order status: HttpClientErrorException"
+        }
+    }
+
     suspend fun modifyOrderStatus(orderId: ObjectId, newStatus: StatusType, authentication: Authentication): String {
         val userDTO = createUserDTOFromLoggedUser(authentication)
         if (userDTO == null) {
