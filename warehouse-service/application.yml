@@ -1,6 +1,0 @@
-spring:
-  application:
-    name: warehouse-service
-
-server:
-  port: 8184
