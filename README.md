@@ -45,9 +45,11 @@ This project defines an implementation proposal for a headless e-commerce web ap
 programming language using the Spring Boot framework. The application leverages an architecture based on four
 microservices, and features robustness to both logical and physical failures.
 
+Final project for course "Advanced Programming" of the 2nd Level Specializing Master's Programme in *"Artificial Intelligence & Cloud: Hands-On Innovation"*, organized by Polytechnic University of Turin in collaboration with Reply.
+
 ### Built With
 
-This application was built leveraging on the following languages and frameworks:
+This application was built leveraging the following languages and frameworks:
 
 * [Kotlin](https://kotlinlang.org/)
 * [Spring Boot](https://spring.io/projects/spring-boot)
@@ -60,25 +62,25 @@ This application was built leveraging on the following languages and frameworks:
 ## Getting Started
 
 This section provides instructions about how to set up the project locally. To get a local copy up and running please
-follow the simple steps described below.
+follow the simple steps described below (please note that the provided commands are intended for the Windows platform).
 
 ### Prerequisites
 
-In order to run the installation commands, you need to have docker installed on your local computer or server. Please
-refer to the [docker documentation](https://docs.docker.com/get-docker/) for installation guidance.
+In order to run the installation commands, you need to have Docker installed on your local computer or server. Please
+refer to the [Docker documentation](https://docs.docker.com/get-docker/) for installation guidance.
 
-### Installation
+### Installation (Windows)
 
 1. Clone the repository
-   ```sh
+   ```powershell
    git clone https://git-softeng.polito.it/master/group-04/ecommerce.git
    ```
 2. Build the `.jar` files for the microservices
-   ```sh
+   ```powershell
    docker-compose -f .\docker-compose-build.yml up --remove-orphans
    ```
 3. Deploy the microservices
-   ```sh
+   ```powershell
    docker-compose -p ecommerce -f .\docker-compose.yml up -d --remove-orphans
    ```
 
@@ -90,11 +92,11 @@ Since the application is headless and does not provide a client-side rendering o
 [Postman](https://www.postman.com/) was used as the reference platform for testing the APIs functionality.
 
 A [Postman collection](https://www.postman.com/collection/) was created in order to provide an easy way of invoking
-the set of available APIs (see `collection-name.json` for more information).
+the set of available APIs (see `eCommerce-requests.json` for more information).
 
 To import the collection into Postman:
 
-1. Click **Import** and select `collection-name.json` (Postman will automatically recognize the type of file).
+1. Click **Import** and select `eCommerce-requests.json` (Postman will automatically recognize the type of file).
     
 2. Click **Import** to bring the collection into Postman.
 
@@ -104,7 +106,7 @@ To import the collection into Postman:
 
 ## License
 
-Released under the MIT License. See `LICENSE.md` for more information.
+Released under the MIT License (see `LICENSE.md` for more information).
 
 <!-- CONTACT -->
 
