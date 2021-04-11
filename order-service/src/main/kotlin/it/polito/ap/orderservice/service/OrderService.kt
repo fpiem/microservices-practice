@@ -75,8 +75,15 @@ class OrderService(
             orderRollback(orderId)
         } else {
             LOGGER.debug("Found order $orderId in the database, order successful")
+            val user = order.buyer?.let { createUserDTO(it) }
+            sendEmail(order, user!!)
         }
     }
+
+    private fun createUserDTO(userId: String): UserDTO {
+        return UserDTO(userId, RoleType.ROLE_CUSTOMER)
+    }
+
 
     fun orderRollback(orderId: String) {
         kafkaTemplate.send("rollback", jacksonObjectMapper.writeValueAsString(orderId))
@@ -175,7 +182,6 @@ class OrderService(
         order.deliveryList = deliveryList
 
         saveOrder(order)
-        sendEmail(order, user)
         LOGGER.debug("Placed new order ${order.orderId}")
         return OrderDTO(order.orderId.toString(), order.status)
     }
@@ -245,7 +251,7 @@ class OrderService(
         }
     }
 
-    private suspend fun sendEmail(order: Order, user: UserDTO) {
+    private fun sendEmail(order: Order, user: UserDTO) {
         val message = SimpleMailMessage()
         message.setSubject("Change status for order ${order.orderId}")
         message.setText(
@@ -283,7 +289,7 @@ class OrderService(
         LOGGER.debug("Emails sent")
     }
 
-    private suspend fun getAdminsEmail(): ArrayList<String>? {
+    private fun getAdminsEmail(): ArrayList<String>? {
         LOGGER.debug("Request to retrieve admins email")
         return try {
             restTemplate.exchange(
@@ -301,7 +307,7 @@ class OrderService(
         }
     }
 
-    private suspend fun getEmailById(userId: String): String? {
+    private fun getEmailById(userId: String): String? {
         LOGGER.debug("Request to retrieve email for $userId")
         return try {
             restTemplate.exchange(
