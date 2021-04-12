@@ -19,16 +19,16 @@
   <summary>Table of Contents</summary>
   <ol>
     <li>
-      <a href="#about-the-project">About The Project</a>
+      <a href="#about-the-project">About the project</a>
       <ul>
-        <li><a href="#built-with">Built With</a></li>
+        <li><a href="#built-with">Built with</a></li>
       </ul>
     </li>
     <li>
-      <a href="#getting-started">Getting Started</a>
+      <a href="#getting-started">Getting started</a>
       <ul>
         <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
+        <li><a href="#installation-windows">Installation (Windows)</a></li>
       </ul>
     </li>
     <li><a href="#usage">Usage</a></li>
@@ -39,7 +39,7 @@
 
 <!-- ABOUT THE PROJECT -->
 
-## About The Project
+## About the project
 
 This project defines an implementation proposal for a headless e-commerce web application, developed in the Kotlin
 programming language using the Spring Boot framework. The application leverages an architecture based on four
@@ -47,7 +47,7 @@ microservices, and features robustness to both logical and physical failures.
 
 Final project for course "Advanced Programming" of the 2nd Level Specializing Master's Programme in *"Artificial Intelligence & Cloud: Hands-On Innovation"*, organized by Polytechnic University of Turin in collaboration with Reply.
 
-### Built With
+### Built with
 
 This application was built leveraging the following languages and frameworks:
 
@@ -59,7 +59,7 @@ This application was built leveraging the following languages and frameworks:
 
 <!-- GETTING STARTED -->
 
-## Getting Started
+## Getting started
 
 This section provides instructions about how to set up the project locally. To get a local copy up and running please
 follow the simple steps described below (please note that the provided commands are intended for the Windows platform).
@@ -71,15 +71,15 @@ refer to the [Docker documentation](https://docs.docker.com/get-docker/) for ins
 
 ### Installation (Windows)
 
-1. Clone the repository
+1. Clone the repository:
    ```powershell
    git clone https://git-softeng.polito.it/master/group-04/ecommerce.git
    ```
-2. Build the `.jar` files for the microservices
+2. Build the `.jar` files for the microservices:
    ```powershell
    docker-compose -f .\docker-compose-build.yml up --remove-orphans
    ```
-3. Deploy the microservices
+3. Deploy the microservices:
    ```powershell
    docker-compose -p ecommerce -f .\docker-compose.yml up -d --remove-orphans
    ```
